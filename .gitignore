@@ -1,0 +1,21 @@
+# .env
+.env.backup
+.env.local
+env.backup
+# .venv/
+# venv/
+# env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+node_modules/
+dist/
+target/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.swp
