@@ -545,7 +545,7 @@ Code dans `question_3_3_C.py`.
 ---
 
 **Réponse / livrable :**
-- Dockerfile : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/ et main.py. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
+- Dockerfile : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
 - .dockerignore : On exclut .env (secrets), .git, __pycache__ et *.db pour ne pas les inclure dans l'image. Les clés API se passent au runtime via -e.
 - Correctif agent.py : Au premier docker run, ImportError car agent.py ne définissait pas de router (fichier piège). J'ai ajouté un router minimal pour que l'app démarre l'agent complet viendra dans les livrables techniques.
 
@@ -647,9 +647,9 @@ Quelle structure de stockage est la plus adaptée pour les embeddings (vecteurs)
 |---|---|---|
 | SQLite avec des colonnes TEXT stockant les vecteurs sérialisés en JSON. | PostgreSQL avec l'extension pgvector, ou une base vectorielle dédiée (Pinecone, Chroma, Weaviate). | MongoDB avec des champs array de nombres. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** En prod, pour une recherche par similarité de sens, il faut un vrai support vectoriel. pgvector ou une base dédiée type Pinecone/Chroma fait ça bien index adaptés, requêtes rapides. SQLite + JSON, ça marche en dev mais en prod c’est du scan complet, ça ne scale pas. MongoDB peut stocker des arrays mais c’est pas son point fort pour la recherche sémantique.
 
 ---
 
@@ -661,7 +661,7 @@ Qu'est-ce qu'une transaction en base de données et pourquoi est-elle importante
 |---|---|---|
 | Une opération unique (insert/update) ; elle garantit cohérence et permanence d'une seule écriture. | Un ensemble d'opérations atomiques : soit toutes réussissent, soit toutes sont annulées (rollback), garantissant la cohérence des données (propriétés ACID). | Un processus d'optimisation des requêtes ; elle garantit rapidité et efficacité de lecture. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -673,9 +673,9 @@ Comment optimiser les requêtes sur de grandes quantités de données temporelle
 |---|---|---|
 | Vues matérialisées pour pré-calculer les agrégations fréquentes | Index B-tree sur les colonnes de date/heure | Partitionnement des tables par période (mois, année) |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** Le partitionnement découpe la table par période, une requete sur 2026 ne scanne que les partitions concernées. Ça réduit le volume lu. Les vues matérialisées et les index aident aussi, mais pour du time-series à grande échelle le partitionnement c'est ce qu'il faut.
 
 ---
 
@@ -687,7 +687,7 @@ Comment stocker l'historique des conversations de l'agent pour pouvoir les réut
 |---|---|---|
 | Une table `conversations` (id, created_at) et une table `messages` (id, conversation_id, role, content, timestamp) avec une clé étrangère. | Tout stocker dans un seul champ JSON dans une table `conversations`. | Stocker uniquement la dernière question/réponse ; les anciennes ne servent à rien. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -699,7 +699,7 @@ Quelle est la différence entre un index full-text (FTS) et un index vectoriel p
 |---|---|---|
 | Aucune différence significative, les deux retournent les mêmes résultats. | FTS recherche par correspondance de mots (lexicale) ; un index vectoriel recherche par similarité de sens (sémantique), capable de trouver des résultats pertinents même si les mots exacts de la requête ne sont pas présents dans le document. | FTS est toujours supérieur car il est plus rapide et ne nécessite pas de modèle d'embedding. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -711,7 +711,7 @@ Quelle approche pour traiter des données « chaudes » pour la détection d'ano
 |---|---|---|
 | Batch processing avec jobs périodiques | Stream processing (Kafka, Flink) | Stockage en lac de données pour analyse hebdomadaire |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -723,9 +723,9 @@ Quelle action pour améliorer les performances de lecture des requêtes fréquen
 |---|---|---|
 | Augmenter la RAM du serveur | Partitionnement des tables par temps | Créer des index sur les colonnes des clauses WHERE |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** Les index sur les colonnes des WHERE évitent le scan complet et la BDD accède directement aux lignes concernées. C'est le premier levier pour des requêtes lentes. La RAM et le partitionnement aident aussi, mais sans index les requêtes lisent trop de données.
 
 ---
 
@@ -737,9 +737,9 @@ Quelle requête SQL pour insérer des données dans `production_values` (la prod
 |---|---|---|
 | INSERT INTO production_values (...) VALUES (...); | UPDATE production_values SET value = ... WHERE ... | SELECT * INTO production_values FROM productions WHERE ... |
 
-**Réponse :**
+**Réponse :** A
 
-**Justification :**
+**Justification :** Insérer = ajouter des lignes. INSERT est l'opération adaptée. UPDATE modifie des lignes existantes. SELECT INTO crée une nouvelle table à partir d'une requête, ce n'est pas une insertion dans une table existante.
 
 ---
 
@@ -751,9 +751,9 @@ Quel snippet pour mettre à jour une prévision dans `forecast_consumption` avec
 |---|---|---|
 | query + .first() puis modification de l'attribut + session.commit() | session.add(ForecastConsumption(...)) + commit | session.execute('UPDATE ...') + commit |
 
-**Réponse :**
+**Réponse :** A
 
-**Justification :**
+**Justification :** Pour une mise à jour : on récupère la ligne (query + first), on modifie l'attribut, on commit. B (add) sert à insérer une nouvelle ligne. C (execute) envoie du SQL brut, ça marche mais A correspond au pattern de mise à jour avec SQLAlchemy.
 
 ---
 
@@ -765,7 +765,7 @@ Quels avantages MongoDB offre-t-il par rapport à SQLite pour ce type de projet 
 |---|---|---|
 | Données non structurées, pas de schéma prédéfini | Volumes importants et scalabilité horizontale | Authentification et autorisation intégrées |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -777,7 +777,7 @@ Pour permettre la suppression propre d'un document et de tous ses chunks associ�
 |---|---|---|
 | `FOREIGN KEY ... ON DELETE CASCADE` : la suppression du document supprime automatiquement ses chunks. | `FOREIGN KEY ... ON DELETE SET NULL` : les chunks orphelins ont leur `document_id` mis à NULL. | Suppression manuelle des chunks puis du document dans deux requêtes séparées, sans contrainte de clé étrangère. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -789,7 +789,7 @@ Face à une augmentation imprévue de la charge sur la base, quelle stratégie e
 |---|---|---|
 | Augmenter les ressources serveur (scaling vertical). | Optimiser les requêtes et les index en premier (quick wins). | Migrer immédiatement vers une base distribuée (scaling horizontal). |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
