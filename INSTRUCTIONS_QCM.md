@@ -55,7 +55,7 @@ Quel est le principal avantage de l'utilisation de conteneurs Docker dans le dé
 |---|---|---|
 | Ils permettent une isolation de l'utilisation des ressources de la machine hôte. | Ils assurent l'isolation des applications et leurs dépendances, facilitant ainsi la portabilité et la cohérence entre les environnements de développement, de test et de production. | Ils augmentent la sécurité des applications en bloquant toute interaction réseau. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -67,7 +67,7 @@ En termes de sécurité des données, quelle est la meilleure pratique pour la g
 |---|---|---|
 | Stocker les clés en dur dans le code source ou dans un fichier `.env` versionné sur Git. | Utiliser un service de gestion des secrets (Vault, AWS Secrets Manager, KMS) ou des variables d'environnement configurées au niveau de l'infrastructure de déploiement. | Envoyer les clés par email ou Slack aux membres de l'équipe pour utilisation lorsque nécessaire. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -79,7 +79,7 @@ Quelle caractéristique des bases de données NoSQL est particulièrement utile 
 |---|---|---|
 | La normalisation des données. | La flexibilité des schémas de données. | La prise en charge exclusive des transactions ACID. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -91,7 +91,7 @@ Dans le contexte de l'ingénierie de données, quel outil est le plus adapté po
 |---|---|---|
 | Docker | Apache Kafka | Apache Airflow |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -103,7 +103,9 @@ Quelle est la différence fondamentale entre un chatbot classique et un agent IA
 |---|---|---|
 | Un agent IA utilise obligatoirement GPT-4 ; un chatbot peut utiliser n'importe quel modèle. | Un agent IA possède une base de connaissances définie, peut initier plusieurs actions, et choisit la bonne action selon le contexte. Un chatbot se contente de générer du texte en réponse à un input. | Un agent IA fonctionne toujours sans intervention humaine ; un chatbot nécessite systématiquement un humain dans la boucle. |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — What is an AI Agent?](https://tomoro.ai/insights/what-is-an-ai-agent)
 
 ---
 
@@ -115,7 +117,9 @@ Dans le contexte des LLMs, qu'est-ce que l'« hallucination » ?
 |---|---|---|
 | Un bug logiciel qui provoque des crashs aléatoires du modèle. | Le fait qu'un LLM génère des réponses confidentes mais factuellement incorrectes, sans vérifier les informations disponibles — comme passer un examen open-book en s'appuyant uniquement sur sa mémoire. | Un mécanisme de sécurité qui empêche le modèle de répondre à certaines questions sensibles. |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -127,9 +131,9 @@ Quel est le rôle du RAG (Retrieval-Augmented Generation) dans un système d'age
 |---|---|---|
 | Augmenter la taille du context window du LLM pour y faire tenir plus d'informations. | Récupérer des informations pertinentes depuis une source externe (base vectorielle, documents) et les injecter dans le prompt avant la génération de la réponse, permettant au LLM de s'appuyer sur des faits vérifiables. | Entraîner (fine-tuner) le LLM sur de nouvelles données pour mettre à jour ses connaissances internes. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** RAG = récupérer des docs pertinents (base vectorielle, documents), les injecter dans le prompt, puis générer. Le LLM s'appuie sur des faits vérifiables. A = faux (RAG ne modifie pas la taille du context window). C = fine-tuning, pas RAG.
 
 ---
 
@@ -141,7 +145,7 @@ Parmi les techniques suivantes, lesquelles permettent de réduire les hallucinat
 |---|---|---|---|
 | Augmenter la température (temperature) du modèle pour diversifier les réponses. | Séparer le raisonnement (LLM) de la mémoire (base de connaissances externe) et forcer le modèle à citer ses sources. | Utiliser un context window plus grand. | Implémenter des guardrails qui vérifient la cohérence de la réponse avec le contexte fourni. |
 
-**Réponse :**
+**Réponse :** B et D
 
 ---
 
@@ -153,7 +157,9 @@ Qu'est-ce que le MCP (Model Context Protocol) développé par Anthropic ?
 |---|---|---|
 | Un protocole de communication entre LLMs qui leur permet de se parler directement entre eux. | Un framework propriétaire d'Anthropic, uniquement utilisable avec Claude, pour gérer le fine-tuning de modèles. | Un protocole standardisé et open-source qui connecte les LLMs aux données et outils via une architecture client-serveur utilisant JSON-RPC 2.0, adopté par OpenAI, Microsoft, AWS et Google. |
 
-**Réponse :**
+**Réponse :** C
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -165,7 +171,9 @@ Dans l'architecture MCP, quels sont les trois composants principaux ?
 |---|---|---|
 | Frontend, Backend, Database | Hosts (applications LLM), Clients (maintiennent les connexions avec les serveurs), Servers (fournissent contexte, outils et prompts à la demande) | Producer, Consumer, Broker |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -177,9 +185,15 @@ Quels sont les deux modes de transport supportés par MCP ?
 |---|---|---|
 | WebSocket et gRPC | Standard Input/Output (stdio) et Streamable HTTP | REST API et GraphQL |
 
-**Réponse :**
+**Réponse :** B
 
 **Justification (quel usage pour chaque mode ?) :**
+- **stdio** : communication via stdin/stdout du OS, zéro config. Usage : communication locale entre processus (ex. serveur MCP lancé par Claude Desktop sur la même machine).
+- **Streamable HTTP** : transport HTTP, un endpoint pour envoi/réception. Usage : réseau, cloud, conteneurs. Communication bidirectionnelle temps réel.
+- **Pourquoi pas A (WebSocket, gRPC) ?** MCP définit stdio et Streamable HTTP comme transports officiels. WebSocket et gRPC sont d'autres protocoles.
+- **Pourquoi pas C (REST, GraphQL) ?** REST et GraphQL sont des modèles d'API, pas les transports MCP. MCP utilise JSON-RPC 2.0 sur stdio ou Streamable HTTP.
+
+
 
 ---
 
@@ -191,7 +205,9 @@ Selon le document Tomoro.ai, dans quels cas ne faut-il PAS utiliser MCP ?
 |---|---|---|---|
 | Quand on travaille avec des données statiques et immuables. | Quand la tâche est courte et auto-contenue, tenant confortablement dans le context window. | Quand on a besoin d'accès en temps réel à des données externes. | Quand le scénario est simple et ne nécessite pas d'outils spécialisés. |
 
-**Réponse :**
+**Réponse :** A, B, D
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -203,7 +219,9 @@ Selon l'article "Anatomy of an AI Agent", quelles sont les caractéristiques fon
 |---|---|---|
 | Traiter des inputs complexes, prendre des décisions, utiliser les bons outils, lire/écrire depuis des connaissances fiables, opérer dans des guardrails mesurables, interagir avec humains et autres agents. | Générer du texte, traduire des langues, résumer des documents, classifier des données, générer des images, répondre à des questions. | Scraper le web, stocker en base, transformer les données, entraîner des modèles, déployer des APIs, monitorer les performances. |
 
-**Réponse :**
+**Réponse :** A
+
+Réf. : [Tomoro.ai — Anatomy of an AI Agent](https://tomoro.ai/insights/anatomy-of-an-ai-agent)
 
 ---
 
@@ -215,7 +233,7 @@ Quel mécanisme permet d'assurer la tolérance aux pannes dans un système de fi
 |---|---|---|
 | Le partitionnement des topics | L'utilisation de transactions pour chaque message | La réplication des messages sur plusieurs nœuds |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -227,7 +245,7 @@ En quoi les WebSockets amélioreraient-ils la communication backend/frontend par
 |---|---|---|
 | Communication unidirectionnelle uniquement. | Authentification obligatoire à chaque message. | Connexion bidirectionnelle persistante, mises à jour en temps réel sans requêtes répétées. |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 

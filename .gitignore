@@ -19,3 +19,7 @@ Thumbs.db
 *.tmp
 *.temp
 *.swp
+
+# Notes personnelles (à ne pas versionner)
+NOTES.md
+QCM_LEARNING_GUIDE.md
