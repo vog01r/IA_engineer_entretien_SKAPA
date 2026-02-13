@@ -464,7 +464,7 @@ def insert_production_value(start_date, end_date, updated_date, value, productio
 |---|---|---|
 | Il n'y a pas de gestion des erreurs ou des exceptions | La connexion à la base de données n'est pas fermée correctement | La méthode "INSERT or IGNORE" peut entraîner des doublons dans la table "production_values" |
 
-**Réponse :** A et B
+**Réponse :** A, B
 
 ---
 
@@ -476,13 +476,13 @@ Quel est le problème potentiel de ce code (accès à `peak[0]`, `peak[1]`, etc.
 |---|---|---|
 | Le code suppose que la variable peak contient exactement quatre éléments et accède directement par indice. | Il ne vérifie pas si les valeurs passées à insert_forecast_consumption sont du bon type ou valides. | On attend un type int au niveau de value["value"]. |
 
-**Réponse :** A, B et C
+**Réponse :** A, B, C
 
 ---
 
 ### Question 3.5 — Exercice pratique (une seule variante à traiter)
 
-**Variante choisie :** A / B / C / D / E / F *(indiquer votre choix)*
+**Variante choisie :** E
 
 ---
 
@@ -544,7 +544,13 @@ Code dans `question_3_3_C.py`.
 
 ---
 
-**Réponse / livrable :** *(code dans le repo + bref commentaire ici)*
+**Réponse / livrable :**
+
+- **Dockerfile** : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install — comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/ et main.py. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
+- **.dockerignore** : On exclut .env (secrets), .git, __pycache__ et *.db pour ne pas les inclure dans l'image. Les clés API se passent au runtime via -e.
+- **Correctif agent.py** : Au premier `docker run`, ImportError car agent.py ne définissait pas de router (fichier piège). J'ai ajouté un router minimal pour que l'app démarre ; l'agent complet viendra dans les livrables techniques.
+
+**Commandes :** `docker build -t api-meteo .` puis `docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
 
 ---
 
