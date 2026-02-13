@@ -545,12 +545,11 @@ Code dans `question_3_3_C.py`.
 ---
 
 **Réponse / livrable :**
+- Dockerfile : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/ et main.py. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
+- .dockerignore : On exclut .env (secrets), .git, __pycache__ et *.db pour ne pas les inclure dans l'image. Les clés API se passent au runtime via -e.
+- Correctif agent.py : Au premier docker run, ImportError car agent.py ne définissait pas de router (fichier piège). J'ai ajouté un router minimal pour que l'app démarre l'agent complet viendra dans les livrables techniques.
 
-- **Dockerfile** : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install — comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/ et main.py. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
-- **.dockerignore** : On exclut .env (secrets), .git, __pycache__ et *.db pour ne pas les inclure dans l'image. Les clés API se passent au runtime via -e.
-- **Correctif agent.py** : Au premier `docker run`, ImportError car agent.py ne définissait pas de router (fichier piège). J'ai ajouté un router minimal pour que l'app démarre ; l'agent complet viendra dans les livrables techniques.
-
-**Commandes :** `docker build -t api-meteo .` puis `docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
+Commandes : docker build -t api-meteo . puis docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
 
 ---
 
@@ -562,9 +561,11 @@ Quelle serait la problématique si plusieurs instances de l'API se connectent à
 |---|---|---|
 | Aucun problème, SQLite gère parfaitement les connexions simultanées. | Détérioration des performances globales des requêtes à cause du verrouillage global. | Problèmes de concurrence d'accès : SQLite utilise un verrou fichier global (file-level locking) qui bloque les écritures concurrentes. |
 
-**Réponse :**
+**Réponse :** B C
 
-**Justification (quelle alternative pour la production ?) :**
+**Justification (quelle alternative pour la production ?) :** 
+PostgreSQL ou MySQL, qui gèrent les écritures concurrentes avec des verrous plus fins (ligne/page). 
+
 
 ---
 
@@ -576,7 +577,7 @@ Pour limiter les coûts d'appels LLM dans un agent en production, quelles techni
 |---|---|---|---|
 | Mettre en cache les réponses pour des questions identiques ou sémantiquement similaires (cache sémantique). | Router les questions simples vers un modèle léger (Haiku, GPT-4o-mini) et les complexes vers un modèle puissant (Opus, GPT-4o). | Toujours utiliser le modèle le plus puissant pour garantir la qualité maximale. | Compresser le contexte envoyé au LLM en ne gardant que les chunks les plus pertinents (top-K). |
 
-**Réponse :**
+**Réponse :** A, B,  D
 
 ---
 
@@ -588,7 +589,7 @@ Qu'est-ce qu'un « tool » dans le contexte de MCP et du function calling des LL
 |---|---|---|
 | Un outil externe que le LLM peut décider d'appeler via une interface standardisée : le LLM reçoit la description du tool (nom, paramètres, usage), décide s'il doit l'utiliser, génère les paramètres d'appel, et reçoit le résultat pour formuler sa réponse. | Un plugin que l'utilisateur installe manuellement pour ajouter des fonctionnalités au chatbot. | Un script cron qui s'exécute en arrière-plan pour alimenter le LLM en données fraîches. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -600,7 +601,7 @@ Quel serait le principal avantage d'adopter GraphQL pour ce service à la place 
 |---|---|---|
 | Requêtes plus flexibles et récupération précise des données, moins de surcharge réseau. | GraphQL remplace la nécessité d'une base de données. | GraphQL automatise la documentation de l'API. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -612,7 +613,7 @@ Pour une mise à jour partielle d'un enregistrement de prévision météo, quell
 |---|---|---|
 | `PUT` avec body complet (tous les champs) | `PATCH` avec body partiel (uniquement les champs à modifier) | `POST` sur un endpoint `/update` avec id et valeur |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
