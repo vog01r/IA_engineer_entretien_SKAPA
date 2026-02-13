@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Question 3.8 — Script d'analyse de la base de connaissances
+Question 3.8 — Script d'analyse de la base de connaissances (3.11 + 3.12)
 
 Script standalone : python question_3_8.py
 
@@ -9,6 +9,7 @@ Affiche :
 2. Nombre moyen de caractères par chunk
 3. Les 3 chunks les plus courts (potentiellement inutiles / à nettoyer)
 4. Nombre d'enregistrements dont created_at est vide ou NULL
+5. Pour chaque table : nombre d'enregistrements dont updated_date est vide ou NULL
 """
 
 import sqlite3
@@ -16,7 +17,6 @@ import sys
 from pathlib import Path
 
 
-# Chemin vers la base : relatif à la racine du projet (dossier du script)
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATABASE_PATH = PROJECT_ROOT / "database.db"
 
@@ -79,6 +79,15 @@ def count_missing_created_at(conn) -> int:
     return cursor.fetchone()[0]
 
 
+def ensure_table_exists(conn, table: str) -> bool:
+    """Vérifie que la table existe."""
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table,),
+    )
+    return cursor.fetchone() is not None
+
+
 def truncate_content(content: str, max_length: int = 80) -> str:
     """Tronque le contenu pour l'affichage, avec ellipsis si nécessaire."""
     content = content.strip()
@@ -87,15 +96,63 @@ def truncate_content(content: str, max_length: int = 80) -> str:
     return content[: max_length - 3].rstrip() + "..."
 
 
-def ensure_table_exists(conn) -> bool:
-    """Vérifie que la table knowledge_chunks existe."""
+# ─── 3.12 : updated_date par table ──────────────────────────────────────────
+
+def get_tables(conn) -> list[str]:
+    """Retourne la liste des tables (hors schéma interne SQLite)."""
     cursor = conn.execute(
         """
         SELECT name FROM sqlite_master
-        WHERE type = 'table' AND name = 'knowledge_chunks'
+        WHERE type = 'table'
+          AND name NOT LIKE 'sqlite_%'
+        ORDER BY name
         """
     )
-    return cursor.fetchone() is not None
+    return [row[0] for row in cursor.fetchall()]
+
+
+def table_has_column(conn, table: str, column: str) -> bool:
+    """Vérifie si la table possède la colonne spécifiée."""
+    cursor = conn.execute(f"PRAGMA table_info({table})")
+    columns = [row[1] for row in cursor.fetchall()]
+    return column in columns
+
+
+def count_empty_or_null_updated_date(conn, table: str) -> int | None:
+    """
+    Compte les enregistrements où updated_date est NULL ou vide.
+    Retourne None si la colonne n'existe pas.
+    """
+    if not table_has_column(conn, table, "updated_date"):
+        return None
+
+    cursor = conn.execute(
+        f"""
+        SELECT COUNT(*) FROM "{table}"
+        WHERE updated_date IS NULL
+           OR TRIM(updated_date) = ''
+        """
+    )
+    return cursor.fetchone()[0]
+
+
+def print_updated_date_report(conn) -> None:
+    """Affiche le rapport updated_date vide/NULL par table."""
+    tables = get_tables(conn)
+    if not tables:
+        return
+
+    print("=" * 60)
+    print("5. Enregistrements avec updated_date vide ou NULL (par table)")
+    print("=" * 60)
+
+    for table in tables:
+        count = count_empty_or_null_updated_date(conn, table)
+        if count is None:
+            print(f"  • {table}: colonne updated_date absente")
+        else:
+            print(f"  • {table}: {count}")
+    print()
 
 
 def main() -> int:
@@ -107,50 +164,53 @@ def main() -> int:
         return 1
 
     try:
-        if not ensure_table_exists(conn):
+        # ─── 3.11 : stats knowledge_chunks ───────────────────────────────────
+
+        if not ensure_table_exists(conn, "knowledge_chunks"):
             print("Erreur : la table 'knowledge_chunks' n'existe pas.", file=sys.stderr)
+            print_updated_date_report(conn)
             return 1
 
-        # 1. Chunks par source
         chunks_by_source = count_chunks_by_source(conn)
         total_chunks = sum(n for _, n in chunks_by_source)
 
         if total_chunks == 0:
             print("La table knowledge_chunks est vide. Aucune donnée à afficher.")
-            return 0
+            print()
+        else:
+            print("=" * 60)
+            print("1. Nombre total de chunks par document source")
+            print("=" * 60)
+            for source_file, count in chunks_by_source:
+                print(f"  • {source_file}: {count} chunk(s)")
+            print()
 
-        print("=" * 60)
-        print("1. Nombre total de chunks par document source")
-        print("=" * 60)
-        for source_file, count in chunks_by_source:
-            print(f"  • {source_file}: {count} chunk(s)")
-        print()
+            avg_chars = average_characters_per_chunk(conn)
+            print("=" * 60)
+            print("2. Nombre moyen de caractères par chunk")
+            print("=" * 60)
+            print(f"  Moyenne : {avg_chars:.1f} caractères" if avg_chars else "  N/A")
+            print()
 
-        # 2. Moyenne de caractères par chunk
-        avg_chars = average_characters_per_chunk(conn)
-        print("=" * 60)
-        print("2. Nombre moyen de caractères par chunk")
-        print("=" * 60)
-        print(f"  Moyenne : {avg_chars:.1f} caractères" if avg_chars else "  N/A")
-        print()
+            shortest = get_shortest_chunks(conn, limit=3)
+            print("=" * 60)
+            print("3. Les 3 chunks les plus courts (potentiellement à nettoyer)")
+            print("=" * 60)
+            for chunk_id, source_file, content, length in shortest:
+                preview = truncate_content(content)
+                print(f"  [id={chunk_id}] {source_file} ({length} car.) : « {preview} »")
+            print()
 
-        # 3. Les 3 chunks les plus courts
-        shortest = get_shortest_chunks(conn, limit=3)
-        print("=" * 60)
-        print("3. Les 3 chunks les plus courts (potentiellement à nettoyer)")
-        print("=" * 60)
-        for chunk_id, source_file, content, length in shortest:
-            preview = truncate_content(content)
-            print(f"  [id={chunk_id}] {source_file} ({length} car.) : « {preview} »")
-        print()
+            missing_created_at = count_missing_created_at(conn)
+            print("=" * 60)
+            print("4. Enregistrements avec created_at vide ou NULL")
+            print("=" * 60)
+            print(f"  Nombre : {missing_created_at}")
+            print()
 
-        # 4. Enregistrements avec created_at vide ou NULL
-        missing_created_at = count_missing_created_at(conn)
-        print("=" * 60)
-        print("4. Enregistrements avec created_at vide ou NULL")
-        print("=" * 60)
-        print(f"  Nombre : {missing_created_at}")
-        print()
+        # ─── 3.12 : updated_date par table (toujours exécuté) ─────────────────
+
+        print_updated_date_report(conn)
 
         return 0
 
