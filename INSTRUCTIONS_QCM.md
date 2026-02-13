@@ -803,7 +803,7 @@ Quels sont les avantages concrets d'utiliser MCP plutôt que des intégrations c
 |---|---|---|
 | MCP est un standard ouvert adopté par toute l'industrie (Anthropic, OpenAI, Microsoft, AWS) : une seule implémentation côté serveur fonctionne avec tous les clients compatibles, évitant de réécrire N intégrations. | MCP est plus performant que des intégrations custom car il utilise des protocoles binaires optimisés. | MCP n'a aucun avantage réel par rapport à des intégrations custom bien faites. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -815,7 +815,7 @@ Comment concevriez-vous un système de monitoring et d'alerte pour cette API + a
 |---|---|---|
 | Se fier uniquement aux logs standards du serveur web. | Rapports d'erreur envoyés manuellement par email à l'équipe technique. | Outil de surveillance en temps réel (Prometheus/Grafana, Datadog) avec alerting automatique, tracking des métriques clés (latence API, taux d'erreur, coûts LLM, taux d'hallucination). |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -827,9 +827,10 @@ Pour déployer cet agent en production avec plusieurs utilisateurs simultanés, 
 |---|---|---|
 | Un seul serveur puissant qui gère tout (API, agent, base, MCP, bot). | API FastAPI conteneurisée (Docker) avec auto-scaling, base de données externe (PostgreSQL + vectorielle), file d'attente pour les requêtes LLM coûteuses, cache Redis pour les réponses fréquentes. | Déployer tout en serverless (AWS Lambda) pour ne payer que les requêtes effectuées. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** L'autoscaling gère les pics. La file d'attente évite de saturer l'API LLM (latence, couts). Le cache Redis réduit les appels répétés. La base externe permet la persistance et la recherche vectorielle. 
+Un seul serveur (A) ne scale pas. Le serverless (C) est compliqué pour un agent stateful avec connexions persistantes.
 
 ---
 
@@ -841,9 +842,10 @@ Approche la plus efficace pour la montée en charge face à une demande fluctuan
 |---|---|---|
 | Serveurs dédiés capacité fixe | Cloud avec auto-scaling selon la charge | Load balancer |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** L'auto scaling adapte la capacité à la demande en temps réel, plus d'instances en pic, moins en creux. 
+Ca évite de gaspiller ou de craquer sous la charge. Le load balancer répartit le trafic mais n'ajoute pas de capacité.
 
 ---
 
@@ -855,7 +857,7 @@ Comment assurer la haute disponibilité de l'API dans un contexte global ?
 |---|---|---|
 | Un seul serveur puissant central | Multi-régions, réplication, basculement automatique | Une instance standby de secours |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -867,7 +869,7 @@ Comment sécuriser les communications entre frontend, backend et base de donnée
 |---|---|---|
 | Protocole FTP | Modifier les CORS | HTTPS et tunnels VPN |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -879,9 +881,9 @@ Stratégie pour minimiser les coûts d'infrastructure cloud tout en maintenant l
 |---|---|---|
 | Allouer un maximum de ressources en permanence pour absorber tous les pics. | Instances réservées pour la charge prévisible de base + auto-scaling à la demande pour les pics. | Tout en serverless, sans aucune ressource réservée. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** Les instances réservées coutent moins cher pour la charge de base. L'autoscaling ajoute des instances seulement pendant les pics. Bon compromis cout performance. A = gaspillage (tu paies le max en permanence). C = serverless a des limites (cold start, timeouts) qui peuvent dégrader les perfs
 
 ---
 
@@ -893,7 +895,7 @@ Comment implémenter la pagination dans l'API ?
 |---|---|---|
 | Limiter les données par réponse | Headers HTTP pour les pages | Paramètres de requête (limit, offset) |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -905,7 +907,7 @@ Plus grand défi lors de l'intégration de données de différentes sources ?
 |---|---|---|
 | Interface utilisateur cohérente | Gérer les différences de format et de modèle de données | Choisir entre SQL et NoSQL |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -917,9 +919,12 @@ Quelle métrique est la plus importante pour évaluer la qualité d'un agent de 
 |---|---|---|---|
 | Le temps de réponse moyen (latence). | La « faithfulness » : la réponse est-elle fidèle au contexte fourni, sans hallucination ? | Le « recall » du retrieval : le système retrouve-t-il les bons documents ? | Le coût par requête en tokens LLM. |
 
-**Réponse :**
+**Réponse :** B
 
 **Justification (comment mesureriez-vous cette métrique ?) :**
+ Si l'agent hallucine on ne lui fera plus confiance
+ Pour mesurer : tu prends un panel de questions avec un contexte connu, ensuite tu compares la réponse aux faits du contexte. Soit à la main si c'est pas trop long, soit avec un claude ou gpt qui fait le juge
+ Tu regardes combien de trucs dit par l'agent ne sont pas supportés par le contexte.
 
 ---
 
