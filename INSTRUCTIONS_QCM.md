@@ -419,7 +419,7 @@ def ask(self, question: str) -> str:
 |---|---|---|---|
 | Le contexte (`context_chunks`) est récupéré mais **n'est jamais injecté** dans les messages envoyés au LLM — la variable `context` est construite puis ignorée. | La température de 0.7 est trop élevée pour un agent Q&A factuel qui devrait privilégier la précision (0.0 à 0.2). | Il n'y a aucune gestion d'erreur : si l'API LLM échoue ou si `search_chunks` ne retourne rien, l'application crashe. | Le code est parfait, il n'y a pas de bug. |
 
-**Réponse :**
+**Réponse :** A, B, C
 
 ---
 
@@ -440,7 +440,7 @@ def ingest_document(filepath: str):
 |---|---|---|
 | Le chunking par double saut de ligne est naïf : il peut produire des chunks trop petits (1 mot) ou trop grands (10 pages), et coupe potentiellement en plein milieu d'une idée. | Le code ne gère pas les encodages de fichier (UTF-8 BOM, latin-1) et ne fait aucune gestion d'erreur. | Le code ne vérifie pas si le document a déjà été ingéré, ce qui causera des doublons en base à chaque exécution. |
 
-**Réponse :**
+**Réponse :** A, B, C
 
 ---
 
@@ -464,7 +464,7 @@ def insert_production_value(start_date, end_date, updated_date, value, productio
 |---|---|---|
 | Il n'y a pas de gestion des erreurs ou des exceptions | La connexion à la base de données n'est pas fermée correctement | La méthode "INSERT or IGNORE" peut entraîner des doublons dans la table "production_values" |
 
-**Réponse :**
+**Réponse :** A et B
 
 ---
 
@@ -476,7 +476,7 @@ Quel est le problème potentiel de ce code (accès à `peak[0]`, `peak[1]`, etc.
 |---|---|---|
 | Le code suppose que la variable peak contient exactement quatre éléments et accède directement par indice. | Il ne vérifie pas si les valeurs passées à insert_forecast_consumption sont du bon type ou valides. | On attend un type int au niveau de value["value"]. |
 
-**Réponse :**
+**Réponse :** A, B et C
 
 ---
 
