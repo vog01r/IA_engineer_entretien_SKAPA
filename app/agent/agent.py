@@ -48,7 +48,7 @@ FORMAT DE RÉPONSE :
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=0.7,  # À modifier à 0.1 au commit 3
+            temperature=0.1,  # Bas pour Q&A factuel (cohérence, précision)
         )
 
         return response.choices[0].message.content or ""
