@@ -1,5 +1,6 @@
 import requests
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from app.db.crud import (
     get_all_weather,
@@ -14,15 +15,21 @@ _BASE = OPEN_METEO_URL
 router = APIRouter()
 
 
+class WeatherParams(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90, description="Latitude entre -90 et 90")
+    longitude: float = Field(..., ge=-180, le=180, description="Longitude entre -180 et 180")
+
+
 @router.get("/fetch")
-def fetch_weather(latitude: float = 43.6599, longitude: float = 1.3623):
-    params = {
+def fetch_weather(params: WeatherParams = Depends()):
+    latitude, longitude = params.latitude, params.longitude
+    api_params = {
         "latitude": latitude,
         "longitude": longitude,
         "hourly": "temperature_2m",
     }
     try:
-        r = requests.get(_BASE, params=params, timeout=15)
+        r = requests.get(_BASE, params=api_params, timeout=15)
         r.raise_for_status()
         data = r.json()
     except requests.RequestException as e:
@@ -52,8 +59,8 @@ def list_weather():
 
 
 @router.get("/location")
-def list_weather_by_location(latitude: float, longitude: float):
-    return {"weather": get_weather_by_location(latitude, longitude)}
+def list_weather_by_location(params: WeatherParams = Depends()):
+    return {"weather": get_weather_by_location(params.latitude, params.longitude)}
 
 
 @router.get("/range")
