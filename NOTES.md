@@ -299,6 +299,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 17. `fix(frontend): Tailwind v4 avec @tailwindcss/vite`
 18. `fix(frontend): regrouper les prévisions météo par lieu, limiter à 24h`
 19. `fix(ux): message météo avec résumé et layout 2 colonnes`
+20. `feat(deps): ajout python-telegram-bot pour bot Telegram`
 
 ---
 
@@ -378,6 +379,27 @@ Exemple config Cursor (~/.cursor/mcp.json) :
   }
 }
 ```
+
+---
+
+## 20. Dépendance python-telegram-bot (feat(deps))
+
+**Objectif :** Préparer l’intégration du bot Telegram prévue dans le projet (features-plan, README).
+
+**Ce qu’on a fait :**
+- Ajout de `python-telegram-bot` dans `requirements.txt`
+
+**Pourquoi :** Bibliothèque standard pour les bots Telegram en Python (polling, webhooks, handlers). Mentionnée dans INSTRUCTIONS_QCM et features-plan.
+
+**Installation manuelle :** L’installation via pip a échoué en environnement sandbox (erreur SSL cert). À exécuter localement :
+```bash
+source .venv/bin/activate
+pip install python-telegram-bot
+```
+
+**Note :** Sur macOS avec Python système, si besoin : `pip install python-telegram-bot --break-system-packages` (hors venv). Avec venv, normalement pas nécessaire.
+
+---
 
 **Claude Desktop :** Ajouter dans `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) :
 ```json

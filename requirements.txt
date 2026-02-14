@@ -6,3 +6,4 @@ python-dotenv
 pandas
 openai
 mcp
+python-telegram-bot
