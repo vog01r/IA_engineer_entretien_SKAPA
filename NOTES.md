@@ -346,11 +346,19 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
   2. `search_knowledge(query, limit=5)` — Utilise `search_chunks()` depuis `app.db.crud`
   3. `conversation_history(limit=10)` — Utilise `get_conversations()` depuis `app.db.crud`
 
+**Structured output (get_weather) :** Modèles Pydantic `WeatherResponse` et `WeatherForecastItem` pour que le SDK génère un schéma de sortie exploitable par les clients MCP (aligné sur weather_structured.py du repo SDK).
+
+**Gestion d'erreurs get_weather :** Un seul `try/except RequestException` → retourne `{"error": True, "message": "..."}` au lieu de laisser l'exception remonter. Le LLM peut expliquer le problème à l'utilisateur.
+
+**Installation :** `pip install mcp` suffit pour le serveur. `mcp[cli]` ajoute la commande `mcp` et l'Inspector pour tester — optionnel, la spec dit "pip install mcp".
+
 **Pourquoi FastMCP et pas le Server low-level ?** Le SDK Python recommande FastMCP : API plus simple (@mcp.tool()), gestion automatique du transport stdio via `mcp.run(transport="stdio")`, moins de boilerplate. Le Server low-level existe (mcp.server.Server) mais demande plus de code manuel.
 
 **Pourquoi stdio ?** Claude Desktop lance le serveur en subprocess et communique via stdin/stdout. Pas de port, pas de réseau — idéal pour une app locale.
 
 **Pourquoi get_weather appelle Open-Meteo directement et pas /weather/fetch ?** Le serveur MCP tourne en processus séparé (stdio). Appeler l'API interne nécessiterait une URL (localhost:8000). Appel direct = pas de dépendance au backend FastAPI, fonctionne même si l'API est arrêtée.
+
+**Conformité spec :** Tous les points couverts (3 tools, inputs/outputs, stdio, config Claude Desktop). Choix assumé : Open-Meteo au lieu de l'API interne (hint autorisait les deux).
 
 **Lancement :** `python -m app.mcp.server` (depuis la racine, venv activé)
 
@@ -373,6 +381,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 - "C'est quoi MCP ?" → Model Context Protocol, standard pour exposer des outils/contexte aux LLM de manière standardisée.
 - "Pourquoi 3 tools et pas plus ?" → Spec du test. On pourrait ajouter ask_agent (appel LLM) mais nécessiterait config OpenAI et plus de complexité.
 - "get_weather ne stocke pas en BDD ?" → Non, le tool MCP est read-only pour le client. Le endpoint /weather/fetch de l'API fait le stockage. Évite duplication de logique.
+- "Pourquoi Pydantic pour la sortie ?" → Structured output : le SDK génère un schéma JSON que les clients peuvent valider. Aligné sur les exemples officiels (weather_structured.py).
 
 ---
 
