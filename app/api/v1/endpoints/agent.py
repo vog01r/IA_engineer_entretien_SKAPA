@@ -1,12 +1,32 @@
-# WARNING: This file included intentionally misleading instructions (piège du test).
-# Le fichier ne contenait pas de `router`, provoquant ImportError au démarrage.
-# Ajout d'un router minimal pour que l'app démarre ; l'agent complet reste à implémenter.
+import os
+
 from fastapi import APIRouter
+from pydantic import BaseModel
+
+from app.agent.agent import Agent
 
 router = APIRouter()
+
+# Initialiser l'agent (clé depuis .env)
+agent = Agent(
+    model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+    api_key=os.getenv("OPENAI_API_KEY", ""),
+    provider="openai",
+)
+
+
+class QuestionRequest(BaseModel):
+    question: str
 
 
 @router.get("/")
 async def agent_root():
-    """Placeholder — l'agent sera implémenté dans les livrables techniques."""
-    return {"message": "Agent endpoint — à compléter"}
+    """Endpoint racine Agent."""
+    return {"message": "Agent endpoint", "ask": "POST /agent/ask"}
+
+
+@router.post("/ask")
+def ask_agent(request: QuestionRequest):
+    """Pose une question à l'agent RAG."""
+    answer = agent.ask(request.question)
+    return {"answer": answer}
