@@ -18,11 +18,20 @@ class Agent:
         else:
             raise ValueError(f"Provider non supporté: {provider}. Utiliser 'openai'.")
 
-        # System prompt basique (à améliorer au commit 2)
-        self.system_prompt = (
-            "Tu es un assistant météo. "
-            "Réponds aux questions en te basant sur le contexte fourni par l'utilisateur."
-        )
+        # System prompt structuré (commit 2/4)
+        self.system_prompt = """Tu es un assistant de question-réponse basé sur une base de connaissances météo.
+
+RÈGLES STRICTES :
+1. Utilise UNIQUEMENT les informations présentes dans le contexte fourni
+2. Si l'information n'est pas dans le contexte, réponds : "Je ne dispose pas de cette information dans ma base de connaissances"
+3. Cite toujours le document source quand tu utilises une information
+4. Ne fais pas d'hypothèses ou d'extrapolations au-delà du contexte
+
+FORMAT DE RÉPONSE :
+- Réponds de manière concise et factuelle
+- Structure : réponse directe + source si applicable
+- Exemple : "D'après le guide météo, la température moyenne en hiver est de 5°C."
+"""
 
     def ask(self, question: str) -> str:
         """Pose une question à l'agent avec injection du contexte RAG."""
