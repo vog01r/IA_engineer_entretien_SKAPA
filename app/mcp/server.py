@@ -169,8 +169,11 @@ def conversation_history(limit: int = 10) -> list[dict]:
 
 def main() -> None:
     """Point d'entrée : lance le serveur MCP en transport stdio (Claude Desktop)."""
+    import sys
+    print("Serveur MCP SKAPA démarré (stdio). En attente de connexion...", file=sys.stderr)
     mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
+    # Lancer avec : python -m app.mcp.server (depuis la racine du projet)
     main()
