@@ -1,6 +1,6 @@
 import sqlite3
 
-DATABASE_PATH = "database.db"
+from app.config import DATABASE_PATH
 
 
 def _get_conn():
