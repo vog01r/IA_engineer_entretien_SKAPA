@@ -5,3 +5,4 @@ sqlalchemy
 python-dotenv
 pandas
 openai
+mcp
