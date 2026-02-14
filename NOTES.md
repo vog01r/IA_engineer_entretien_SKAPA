@@ -341,10 +341,11 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 **Implémentation :**
 - **Framework :** FastMCP (MCP Python SDK officiel)
 - **Transport :** stdio (requis pour Claude Desktop)
-- **Outils :**
+- **Outils (4, spec disait « au moins 3 ») :**
   1. `get_weather(latitude, longitude)` — Appel direct Open-Meteo, retourne température actuelle + prévisions 24h avec libellés WMO
   2. `search_knowledge(query, limit=5)` — Utilise `search_chunks()` depuis `app.db.crud`
   3. `conversation_history(limit=10)` — Utilise `get_conversations()` depuis `app.db.crud`
+  4. `get_weather_stats()` — Statistiques météo en base (total prévisions, lieux distincts, temp moyenne) — utilise `get_all_weather()`
 
 **Structured output (get_weather) :** Modèles Pydantic `WeatherResponse` et `WeatherForecastItem` pour que le SDK génère un schéma de sortie exploitable par les clients MCP (aligné sur weather_structured.py du repo SDK).
 

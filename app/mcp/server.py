@@ -1,10 +1,11 @@
 """
 Serveur MCP (Model Context Protocol) — SKAPA
 
-Expose 3 tools connectables depuis Claude Desktop ou un client MCP :
+Expose 4 tools connectables depuis Claude Desktop ou un client MCP :
 - get_weather : prévisions météo via Open-Meteo
 - search_knowledge : recherche dans la base de connaissances
 - conversation_history : historique des conversations agent
+- get_weather_stats : statistiques sur les données météo en base
 
 Transport : stdio (Claude Desktop)
 Référence : https://modelcontextprotocol.io/docs
@@ -16,7 +17,7 @@ from pydantic import BaseModel, Field
 from requests.exceptions import RequestException
 from mcp.server.fastmcp import FastMCP
 
-from app.db.crud import get_conversations, search_chunks
+from app.db.crud import get_all_weather, get_conversations, search_chunks
 
 
 class WeatherForecastItem(BaseModel):
@@ -81,7 +82,7 @@ def _fetch_weather_from_api(latitude: float, longitude: float) -> dict:
 
 mcp = FastMCP(
     "SKAPA",
-    instructions="Serveur MCP pour l'application SKAPA : météo, base de connaissances et historique des conversations.",
+    instructions="Serveur MCP pour l'application SKAPA : météo, base de connaissances, historique des conversations et statistiques météo en base.",
 )
 
 
@@ -165,6 +166,32 @@ def conversation_history(limit: int = 10) -> list[dict]:
         }
         for c in conversations
     ]
+
+
+@mcp.tool()
+def get_weather_stats() -> dict:
+    """Statistiques sur les données météo enregistrées en base.
+
+    Returns:
+        Nombre total de prévisions, lieux distincts, température moyenne.
+    """
+    rows = get_all_weather()
+    if not rows:
+        return {
+            "total_previsions": 0,
+            "lieux_distincts": 0,
+            "temperature_moyenne_c": None,
+            "message": "Aucune donnée météo en base.",
+        }
+
+    temps = [r["temperature_2m"] for r in rows if r.get("temperature_2m") is not None]
+    lieux = {(r["latitude"], r["longitude"]) for r in rows}
+
+    return {
+        "total_previsions": len(rows),
+        "lieux_distincts": len(lieux),
+        "temperature_moyenne_c": round(sum(temps) / len(temps), 1) if temps else None,
+    }
 
 
 def main() -> None:
