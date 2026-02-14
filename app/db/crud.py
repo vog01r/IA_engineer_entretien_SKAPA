@@ -102,8 +102,14 @@ def insert_chunk(source_file: str, content: str, chunk_index: int = 0):
 def search_chunks(query: str, limit: int = 5):
     """Recherche dans la base de connaissances.
 
-    ATTENTION : utilise LIKE pour la recherche — c'est une recherche
-    par sous-chaîne, pas une recherche sémantique.
+    Utilise une recherche LIKE (lexicale, par sous-chaîne).
+    Le terme de requête doit apparaître littéralement dans le contenu.
+
+    Limitation : pas de recherche sémantique.
+    Exemple : "quel temps fait-il ?" ne trouvera pas "prévisions météorologiques".
+    Pour la production : migration vers PostgreSQL + pgvector ou ChromaDB recommandée.
+
+    Gardé en l'état pour ce test (scope limité).
     """
     with sqlite3.connect(DATABASE_PATH) as conn:
         conn.row_factory = sqlite3.Row
