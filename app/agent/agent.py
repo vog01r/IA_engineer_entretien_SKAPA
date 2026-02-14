@@ -35,20 +35,29 @@ FORMAT DE RÉPONSE :
 
     def ask(self, question: str) -> str:
         """Pose une question à l'agent avec injection du contexte RAG."""
-        # Récupérer le contexte depuis la base
-        context_chunks = search_chunks(question)
-        context = "\n---\n".join([c["content"] for c in context_chunks])
+        try:
+            # Récupérer le contexte depuis la base
+            context_chunks = search_chunks(question)
 
-        # Injecter le contexte dans les messages (fix QCM Q3.1)
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": f"Contexte:\n{context}\n\nQuestion: {question}"},
-        ]
+            # Gérer le cas où aucun contexte n'est trouvé
+            if not context_chunks:
+                return "Aucun contexte pertinent trouvé pour répondre à cette question."
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=0.1,  # Bas pour Q&A factuel (cohérence, précision)
-        )
+            context = "\n---\n".join([c["content"] for c in context_chunks])
 
-        return response.choices[0].message.content or ""
+            # Injecter le contexte dans les messages
+            messages = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": f"Contexte:\n{context}\n\nQuestion: {question}"},
+            ]
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.1,  # Bas pour Q&A factuel (cohérence, précision)
+            )
+
+            return response.choices[0].message.content or "Pas de réponse générée."
+
+        except Exception as e:
+            return f"Erreur lors du traitement de la question : {str(e)}"
