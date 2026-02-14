@@ -14,6 +14,35 @@ _BASE = OPEN_METEO_URL
 
 router = APIRouter()
 
+# Mapping WMO weather code → libellé français
+WMO_WEATHER_LABELS = {
+    0: "ciel dégagé",
+    1: "principalement dégagé",
+    2: "partiellement couvert",
+    3: "couvert",
+    45: "brouillard",
+    48: "brouillard givrant",
+    51: "bruine légère",
+    53: "bruine modérée",
+    55: "bruine dense",
+    61: "pluie légère",
+    63: "pluie modérée",
+    65: "pluie forte",
+    71: "neige légère",
+    73: "neige modérée",
+    75: "neige forte",
+    80: "averses légères",
+    81: "averses modérées",
+    82: "averses violentes",
+    95: "orage",
+}
+
+
+def _wmo_to_label(code: int | None) -> str:
+    if code is None:
+        return "—"
+    return WMO_WEATHER_LABELS.get(code, "conditions variables")
+
 
 class WeatherParams(BaseModel):
     latitude: float = Field(..., ge=-90, le=90, description="Latitude entre -90 et 90")
@@ -27,6 +56,7 @@ def fetch_weather(params: WeatherParams = Depends()):
         "latitude": latitude,
         "longitude": longitude,
         "hourly": "temperature_2m",
+        "current": "temperature_2m,weather_code",
     }
     try:
         r = requests.get(_BASE, params=api_params, timeout=15)
@@ -45,11 +75,20 @@ def fetch_weather(params: WeatherParams = Depends()):
         insert_weather(latitude, longitude, time_str, temp)
         stored += 1
 
+    current = data.get("current") or {}
+    current_temp = current.get("temperature_2m")
+    weather_code = current.get("weather_code")
+    summary = {
+        "current_temp": current_temp,
+        "weather_label": _wmo_to_label(weather_code),
+    }
+
     return {
         "message": "Data stored successfully",
         "latitude": latitude,
         "longitude": longitude,
         "stored": stored,
+        "summary": summary,
     }
 
 
