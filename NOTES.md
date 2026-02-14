@@ -362,6 +362,8 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 
 **Lancement :** `python -m app.mcp.server` (depuis la racine, venv activé)
 
+**Testé avec Cursor MCP :** Config dans `~/.cursor/mcp.json`, serveur SKAPA ajouté. Test get_weather(Paris) : OK. Fonctionne parfaitement.
+
 **Claude Desktop :** Ajouter dans `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) :
 ```json
 {
