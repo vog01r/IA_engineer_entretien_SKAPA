@@ -362,7 +362,21 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 
 **Lancement :** `python -m app.mcp.server` (depuis la racine, venv activé)
 
-**Testé avec Cursor MCP :** Config dans `~/.cursor/mcp.json`, serveur SKAPA ajouté. Test get_weather(Paris) : OK. Fonctionne parfaitement.
+**Testé avec Cursor MCP :** Config dans `~/.cursor/mcp.json`, serveur SKAPA ajouté. Les 3 tools sont visibles et fonctionnent. **Fix Cursor :** ajouter `PYTHONPATH` dans `env` (racine du projet) pour éviter `ModuleNotFoundError: No module named 'app'` car Cursor ne met pas toujours le cwd dans le path Python au démarrage du subprocess.
+
+Exemple config Cursor (~/.cursor/mcp.json) :
+```json
+{
+  "mcpServers": {
+    "skapa": {
+      "command": "/chemin/absolu/.venv/bin/python",
+      "args": ["-m", "app.mcp.server"],
+      "cwd": "/chemin/absolu/IA_engineer_entretien_SKAPA",
+      "env": { "PYTHONPATH": "/chemin/absolu/IA_engineer_entretien_SKAPA" }
+    }
+  }
+}
+```
 
 **Claude Desktop :** Ajouter dans `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) :
 ```json
