@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.endpoints.weather import router as weather_router
 from app.api.v1.endpoints.agent import router as agent_router
+from app.config import ALLOWED_ORIGINS
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ app = FastAPI(title="API Météo + MCP", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +51,6 @@ app.include_router(
 )
 
 
-@app.get("/", tags=["Root"], dependencies=[Depends(verify_api_key)])
+@app.get("/", tags=["Root"])
 async def read_root():
     return {"message": "API Météo", "docs": "/docs", "weather": "/weather"}
