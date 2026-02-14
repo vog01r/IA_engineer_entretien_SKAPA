@@ -12,9 +12,27 @@ SDK : https://github.com/modelcontextprotocol/python-sdk
 """
 
 import requests
+from pydantic import BaseModel, Field
+from requests.exceptions import RequestException
 from mcp.server.fastmcp import FastMCP
 
 from app.db.crud import get_conversations, search_chunks
+
+
+class WeatherForecastItem(BaseModel):
+    """Prévision horaire."""
+
+    time: str
+    temperature_2m: float | None
+    weather_label: str
+
+
+class WeatherResponse(BaseModel):
+    """Réponse structurée get_weather."""
+
+    current_temp: float | None = Field(description="Température actuelle °C")
+    current_weather: str = Field(description="Conditions (libellé WMO)")
+    forecasts: list[WeatherForecastItem] = Field(description="Prévisions 24h")
 
 # Mapping WMO weather code → libellé français (aligné avec app.api.v1.endpoints.weather)
 WMO_WEATHER_LABELS = {
@@ -49,7 +67,7 @@ def _wmo_to_label(code: int | None) -> str:
 
 
 def _fetch_weather_from_api(latitude: float, longitude: float) -> dict:
-    """Appel direct à l'API Open-Meteo."""
+    """Appel direct à l'API Open-Meteo. Lève RequestException en cas d'erreur."""
     params = {
         "latitude": latitude,
         "longitude": longitude,
@@ -68,7 +86,7 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def get_weather(latitude: float, longitude: float) -> dict:
+def get_weather(latitude: float, longitude: float) -> WeatherResponse | dict:
     """Récupère les prévisions météo pour des coordonnées GPS.
 
     Args:
@@ -76,9 +94,12 @@ def get_weather(latitude: float, longitude: float) -> dict:
         longitude: Longitude (-180 à 180)
 
     Returns:
-        Données météo : température actuelle, conditions, prévisions horaires
+        WeatherResponse ou dict avec error=True en cas d'échec
     """
-    data = _fetch_weather_from_api(latitude, longitude)
+    try:
+        data = _fetch_weather_from_api(latitude, longitude)
+    except RequestException as e:
+        return {"error": True, "message": f"API météo indisponible : {e}"}
 
     current = data.get("current") or {}
     hourly = data.get("hourly") or {}
@@ -86,19 +107,20 @@ def get_weather(latitude: float, longitude: float) -> dict:
     temps = hourly.get("temperature_2m") or []
     codes = hourly.get("weather_code") or []
 
-    forecasts = []
-    for i, time_str in enumerate(times[:24]):  # 24h max
-        forecasts.append({
-            "time": time_str,
-            "temperature_2m": temps[i] if i < len(temps) else None,
-            "weather_label": _wmo_to_label(codes[i] if i < len(codes) else None),
-        })
+    forecasts = [
+        WeatherForecastItem(
+            time=time_str,
+            temperature_2m=temps[i] if i < len(temps) else None,
+            weather_label=_wmo_to_label(codes[i] if i < len(codes) else None),
+        )
+        for i, time_str in enumerate(times[:24])
+    ]
 
-    return {
-        "current_temp": current.get("temperature_2m"),
-        "current_weather": _wmo_to_label(current.get("weather_code")),
-        "forecasts": forecasts,
-    }
+    return WeatherResponse(
+        current_temp=current.get("temperature_2m"),
+        current_weather=_wmo_to_label(current.get("weather_code")),
+        forecasts=forecasts,
+    )
 
 
 @mcp.tool()
