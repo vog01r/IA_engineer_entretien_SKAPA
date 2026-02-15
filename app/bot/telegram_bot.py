@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.constants import ChatAction
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
@@ -369,6 +369,11 @@ def main() -> None:
     create_tables()
 
     async def post_init(app: Application):
+        await app.bot.set_my_commands([
+            BotCommand("start", "Démarrer le bot"),
+            BotCommand("help", "Aide"),
+            BotCommand("alertes", "Alertes canicule/froid (on [ville] | off)"),
+        ])
         asyncio.create_task(_run_alert_checks(app))
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
