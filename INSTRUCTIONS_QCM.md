@@ -516,7 +516,7 @@ Implémenter un endpoint `POST /agent/evaluate` qui :
 3. Vérifie que les mots-clés attendus sont présents dans la réponse.
 4. Retourne un score de précision global + le détail par question.
 
-Code dans `question_3_3_C.py`.
+Code dans le repo.
 
 ---
 
@@ -540,16 +540,18 @@ Code dans le repo.
 
 Exposer consommation prévisionnelle et réelle pour une période donnée + pourcentage d'écart (consolidation à partir de tables type `forecast_consumption` / `consumption`).
 
-Code dans `question_3_3_C.py`.
+Code dans le repo.
 
 ---
 
 **Réponse / livrable :**
-- Dockerfile : Image python:3.12-slim (légère). On copie d'abord requirements.txt puis on fait pip install comme ça, si seul le code change, Docker réutilise le cache et ne réinstalle pas les dépendances. Ensuite on copie app/. Au démarrage : create_tables() pour SQLite, puis uvicorn sur le port 8000 avec --host 0.0.0.0 pour accepter les connexions externes.
-- .dockerignore : On exclut .env (secrets), .git, __pycache__ et *.db pour ne pas les inclure dans l'image. Les clés API se passent au runtime via -e.
-- Correctif agent.py : Au premier docker run, ImportError car agent.py ne définissait pas de router (fichier piège). J'ai ajouté un router minimal pour que l'app démarre l'agent complet viendra dans les livrables techniques.
+- **Dockerfile** : base `python:3.12-slim`, copie de `requirements.txt` avant `pip install` pour profiter du cache Docker, puis copie du code applicatif. Le conteneur lance `create_tables()` au demarrage et expose l'API via `uvicorn` sur `0.0.0.0:8000` (ou `${PORT}` si fourni).
+- **.dockerignore** : exclusion de `.env`, `.git`, `__pycache__`, environnements virtuels et `*.db` pour eviter d'embarquer secrets, artefacts locaux et base SQLite dans l'image.
+- **Correctif `agent.py`** : ajout d'un `router` FastAPI minimal pour supprimer l'`ImportError` au premier `docker run` (fichier piege dans l'enonce), puis extension ulterieure de l'endpoint agent.
 
-Commandes : docker build -t api-meteo . puis docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
+**Commandes de verification** : `docker build -t api-meteo .` puis `docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
+
+**Commit de reference (historique)** : `99ff9ee` ("Livrable 3.5.E - Dockerfile, .dockerignore, correctif agent.py").
 
 ---
 
