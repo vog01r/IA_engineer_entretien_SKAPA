@@ -301,6 +301,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 19. `fix(ux): message météo avec résumé et layout 2 colonnes`
 20. `feat(deps): ajout python-telegram-bot pour bot Telegram`
 21. `feat(bot): implémentation bot Telegram météo + agent IA`
+21b. `feat(bot): améliorations — villes, typing, prévisions`
 
 ---
 
@@ -431,6 +432,18 @@ pip install python-telegram-bot
 **Lancement :** `python -m app.bot.telegram_bot` (racine, venv activé)
 
 **Piège connu (.cursorrules) :** L'ancien fichier contenait des commentaires trompeurs (test technique). Ils ont été remplacés par l'implémentation fonctionnelle.
+
+---
+
+## 21b. Améliorations bot Telegram (feat(bot))
+
+**Améliorations :**
+1. **Détection noms de villes** : "Paris", "Météo Lyon", "marseille" → fetch météo direct avec nom affiché (Paris, Lyon, Marseille, Toulouse, Bordeaux)
+2. **Indicateur typing** : `send_chat_action(ChatAction.TYPING)` avant chaque réponse
+3. **Prévisions prochaines heures** : affichage temp actuelle + 4 prochaines heures (HH:MM → °C)
+4. **Messages /start et /help** allégés
+
+**VILLES** aligné avec le frontend (LocationSearch.jsx).
 
 ---
 
