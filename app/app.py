@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.endpoints.weather import router as weather_router
@@ -25,10 +25,13 @@ def _check_token(t: str):
     return AUTH_KEY and t == AUTH_KEY
 
 
-def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
+def verify_api_key(request: Request, x_api_key: str | None = Header(None, alias="X-API-Key")):
+    """Vérifie la clé API. Les requêtes OPTIONS (preflight CORS) sont autorisées sans clé."""
+    if request.method == "OPTIONS":
+        return None
     if not API_KEY:
         raise HTTPException(status_code=500, detail="API_KEY non configurée")
-    if x_api_key != API_KEY:
+    if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Clé API invalide")
     return x_api_key
 
