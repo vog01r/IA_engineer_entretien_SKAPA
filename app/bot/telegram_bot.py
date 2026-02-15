@@ -138,7 +138,7 @@ async def start(update: Update, context) -> None:
 🌤️ Bot Météo SKAPA
 
 • /meteo — Météo d'une ville.
-• /alertes — Alertes (on [ville] | off | status).
+• /alertes — Alertes : on Paris, off, ou status.
 • Pose une question — Météo, tendances, alertes personnalisées en langage naturel.
 • /help — Aide.
 """
@@ -166,10 +166,9 @@ async def help_command(update: Update, context) -> None:
     help_text = """
 📖 Aide
 
-• Météo : /meteo [ville] ou "Quel temps à Paris ?"
+• Météo : /meteo Paris ou "Quel temps à Paris ?"
 • Tendances : "Montre-moi la tendance sur 7 jours à Lyon"
-• Alertes : /alertes on [ville] ou "Préviens-moi si < 0°C à Paris"
-• L'API doit tourner pour que l'agent réponde
+• Alertes : /alertes on Paris pour activer les alertes, ou en langage naturel : "Préviens-moi si ça descend sous 0°C à Paris"
 """
     await update.message.reply_text(help_text)
 
@@ -196,7 +195,7 @@ async def alertes_command(update: Update, context) -> None:
             suffix = f" ({', '.join(extra)})" if extra else " (défaut 35°C/-5°C)"
             await update.message.reply_text(f"📍 Alerte active : {alert['label']}{suffix}")
         else:
-            await update.message.reply_text("Aucune alerte. Tape /alertes on [ville] pour t'abonner.")
+            await update.message.reply_text("Aucune alerte. Tape /alertes on Paris pour t'abonner.")
         return
 
     # /alertes on [ville] — toute ville du monde via géocodage
@@ -207,7 +206,7 @@ async def alertes_command(update: Update, context) -> None:
     else:
         place = ""
     if not place:
-        await update.message.reply_text("Usage : /alertes on [ville] — ex: /alertes on Tokyo")
+        await update.message.reply_text("Usage : /alertes on Paris — ex: /alertes on Tokyo")
         return
 
     geo = await geocode_place(place)
@@ -365,7 +364,7 @@ async def callback_buttons(update: Update, context) -> None:
     if query.data == "autre_ville":
         await query.message.reply_text("Écris la ville dont tu veux la météo 😊")
     elif query.data == "activer_alertes":
-        await query.message.reply_text("Pour activer : /alertes on [ville] — ex: /alertes on Paris")
+        await query.message.reply_text("Pour activer : /alertes on Paris — ex: /alertes on Tokyo")
 
 
 async def _run_alert_checks(app: Application) -> None:
@@ -413,7 +412,7 @@ def main() -> None:
             BotCommand("start", "Démarrer le bot"),
             BotCommand("meteo", "Météo d'une ville"),
             BotCommand("help", "Aide"),
-            BotCommand("alertes", "Alertes canicule/froid (on [ville] | off)"),
+            BotCommand("alertes", "Alertes canicule/froid (on ville | off)"),
         ])
         asyncio.create_task(_run_alert_checks(app))
 
