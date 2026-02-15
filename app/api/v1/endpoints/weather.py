@@ -50,13 +50,18 @@ class WeatherParams(BaseModel):
 
 
 @router.get("/fetch")
-def fetch_weather(params: WeatherParams = Depends()):
+def fetch_weather(
+    params: WeatherParams = Depends(),
+    forecast_days: int = 1,
+):
     latitude, longitude = params.latitude, params.longitude
+    forecast_days = max(1, min(16, forecast_days))
     api_params = {
         "latitude": latitude,
         "longitude": longitude,
         "hourly": "temperature_2m",
         "current": "temperature_2m,weather_code",
+        "forecast_days": forecast_days,
     }
     try:
         r = requests.get(_BASE, params=api_params, timeout=15)
