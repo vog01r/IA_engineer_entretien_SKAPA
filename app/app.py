@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.endpoints.weather import router as weather_router
 from app.api.v1.endpoints.agent import router as agent_router
+from app.api.v1.endpoints.mcp_info import router as mcp_info_router
+from app.api.v1.endpoints.weather import router as weather_router
 from app.config import ALLOWED_ORIGINS, API_KEY, AUTH_KEY
 
 load_dotenv()
@@ -48,6 +49,12 @@ app.include_router(
     tags=["Agent"],
     prefix="/agent",
     dependencies=[Depends(verify_api_key)],
+)
+
+app.include_router(
+    mcp_info_router,
+    prefix="/mcp",
+    tags=["MCP"],
 )
 
 
