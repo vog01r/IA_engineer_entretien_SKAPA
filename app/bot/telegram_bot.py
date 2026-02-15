@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import re
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
@@ -56,22 +57,72 @@ def _wmo_to_label(code: int | None) -> str:
     return WMO_WEATHER_LABELS.get(code, "conditions variables")
 
 
-# Villes connues : nom → (lat, lon) — aligné avec frontend
-VILLES = {
-    "paris": (48.8566, 2.3522),
-    "lyon": (45.764, 4.8357),
-    "marseille": (43.2965, 5.3698),
-    "toulouse": (43.6047, 1.4442),
-    "bordeaux": (44.8378, -0.5792),
-}
+# Mots à ignorer pour extraire un lieu (requêtes météo en français)
+_STOPWORDS = {"météo", "temps", "quel", "quelle", "quelle", "à", "dans", "pour", "fait", "il", "et", "le", "la", "les", "des", "un", "une", "de", "du"}
+# Mots qui ne sont jamais des lieux → pas de géocodage
+_NON_PLACE = {"hello", "salut", "coucou", "ok", "oui", "non", "merci", "bonjour", "aurevoir", "hi", "hey"}
 
 
-def extract_city(text: str) -> tuple[float, float, str] | None:
-    """Détecte un nom de ville dans le texte. Retourne (lat, lon, nom_ville) ou None."""
-    text_lower = text.strip().lower()
-    for nom, (lat, lon) in VILLES.items():
-        if nom in text_lower:
-            return (lat, lon, nom.capitalize())
+def _extract_place_query(text: str) -> str:
+    """Extrait une chaîne searchable pour le géocodage (ex: 'météo Paris' → 'Paris')."""
+    text = text.strip()
+    if len(text) < 2:
+        return ""
+    words = [w.strip("?,.") for w in text.lower().split() if w.strip("?,.")]
+    # Chercher le dernier mot significatif (probablement le lieu)
+    for w in reversed(words):
+        if w not in _STOPWORDS and len(w) >= 2:
+            return w.capitalize()
+    return text
+
+
+def _geocode_sync(query: str) -> tuple[float, float, str] | None:
+    """Géocode un lieu via Open-Meteo. Retourne (lat, lon, nom_affiché) ou None."""
+    if len(query) < 2:
+        return None
+    url = (
+        "https://geocoding-api.open-meteo.com/v1/search?"
+        f"name={quote(query)}&count=1&language=fr"
+    )
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException:
+        return None
+    results = data.get("results") or []
+    if not results:
+        return None
+    r = results[0]
+    lat = r.get("latitude")
+    lon = r.get("longitude")
+    name = r.get("name", query)
+    country = r.get("country", "")
+    label = f"{name}, {country}" if country else name
+    if lat is not None and lon is not None:
+        return (float(lat), float(lon), label)
+    return None
+
+
+async def geocode_place(text: str) -> tuple[float, float, str] | None:
+    """Géocode un lieu (non bloquant). Toute ville ou pays au monde."""
+    text = text.strip()
+    if len(text) < 2:
+        return None
+    if text.lower() in _NON_PLACE:
+        return None
+    # Requêtes : texte complet d'abord (New York, Paris), puis extrait (météo Paris → Paris)
+    place_query = _extract_place_query(text)
+    queries = []
+    if len(text) <= 35 and "?" not in text:
+        queries.append(text)
+    if place_query and place_query not in queries and place_query.lower() not in _NON_PLACE:
+        queries.append(place_query)
+    for q in queries:
+        if len(q) >= 2:
+            result = await asyncio.to_thread(_geocode_sync, q)
+            if result:
+                return result
     return None
 
 
@@ -80,7 +131,7 @@ async def start(update: Update, context) -> None:
     welcome = """
 🌤️ Bot Météo SKAPA
 
-• Météo : tapez une ville (Paris, Lyon, Marseille...) ou des coordonnées (48.8, 2.3)
+• Météo : tapez un lieu (ville, pays) ou des coordonnées (48.8, 2.3)
 • Questions : posez une question et j'interroge l'agent IA
 • /help pour plus d'infos
 """
@@ -92,7 +143,7 @@ async def help_command(update: Update, context) -> None:
     help_text = """
 📖 Aide
 
-• Météo : nom de ville (Paris, Lyon, Marseille, Toulouse, Bordeaux) ou coordonnées lat,lon
+• Météo : n'importe quelle ville ou lieu (Paris, Tokyo, New York...) ou coordonnées lat,lon
 • Questions : l'agent IA répond via la base de connaissances (API doit tourner)
 """
     await update.message.reply_text(help_text)
@@ -177,14 +228,14 @@ async def handle_message(update: Update, context) -> None:
         await update.message.reply_text("Envoie une ville, des coordonnées (48.8, 2.3) ou une question.")
         return
 
-    # 1) Ville connue → météo directe
-    city_match = extract_city(text)
-    if city_match:
-        lat, lon, nom = city_match
+    # 1) Coordonnées → météo
+    coords = is_coordinates(text)
+    if coords:
+        lat, lon = coords
         await update.effective_chat.send_chat_action(ChatAction.TYPING)
         try:
             weather = await fetch_weather_api(lat, lon)
-            msg = _format_weather_msg(weather, nom)
+            msg = _format_weather_msg(weather, f"{lat}, {lon}")
             await update.message.reply_text(msg)
         except requests.RequestException as e:
             logger.exception("Erreur Open-Meteo")
@@ -194,14 +245,14 @@ async def handle_message(update: Update, context) -> None:
             await update.message.reply_text(f"❌ Erreur : {e}")
         return
 
-    # 2) Coordonnées → météo
-    coords = is_coordinates(text)
-    if coords:
-        lat, lon = coords
+    # 2) Lieu (géocodage) → météo
+    geo = await geocode_place(text)
+    if geo:
+        lat, lon, label = geo
         await update.effective_chat.send_chat_action(ChatAction.TYPING)
         try:
             weather = await fetch_weather_api(lat, lon)
-            msg = _format_weather_msg(weather, f"{lat}, {lon}")
+            msg = _format_weather_msg(weather, label)
             await update.message.reply_text(msg)
         except requests.RequestException as e:
             logger.exception("Erreur Open-Meteo")

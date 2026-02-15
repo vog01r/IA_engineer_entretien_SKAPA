@@ -302,6 +302,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 20. `feat(deps): ajout python-telegram-bot pour bot Telegram`
 21. `feat(bot): implémentation bot Telegram météo + agent IA`
 21b. `feat(bot): améliorations — villes, typing, prévisions`
+21c. `feat(bot): géocodage Open-Meteo pour toute ville du monde`
 
 ---
 
@@ -444,6 +445,22 @@ pip install python-telegram-bot
 4. **Messages /start et /help** allégés
 
 **VILLES** aligné avec le frontend (LocationSearch.jsx).
+
+---
+
+## 21c. Géocodage pour toute ville (feat(bot))
+
+**Contexte consigne :** "Permet de demander la météo d'un lieu directement depuis Telegram" — pas limité à quelques villes.
+
+**Ce qu'on a fait :**
+- Suppression du mapping VILLES (5 villes) → géocodage via Open-Meteo Geocoding API
+- **API :** `https://geocoding-api.open-meteo.com/v1/search?name=X&count=1&language=fr`
+- Extraction du lieu : "météo Paris" → "Paris", "quelle météo à Lyon" → "Lyon"
+- Essai texte complet d'abord pour multi-mots ("New York", "Rio de Janeiro")
+- Liste _NON_PLACE (hello, salut, ok...) pour éviter faux positifs
+- Affichage : "Paris, France" ou "Tokyo, Japan" (nom + pays)
+
+**Trade-off :** Latence +1 requête HTTP pour le géocodage. Gratuit, pas de clé API.
 
 ---
 
