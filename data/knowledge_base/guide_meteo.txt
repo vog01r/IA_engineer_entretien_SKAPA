@@ -1,0 +1,16 @@
+Guide météo — Base de connaissances
+
+Paris
+Les prévisions météo à Paris sont disponibles via l'API Open-Meteo. Paris se situe aux coordonnées 48.8566, 2.3522. La température moyenne en hiver est d'environ 5°C, et en été autour de 20°C. Les précipitations sont réparties toute l'année.
+
+Lyon
+La météo à Lyon (45.764, 4.8357) présente un climat semi-continental. Les étés peuvent être chauds (25-30°C) et les hivers froids avec possible neige. Le mistral peut influencer le temps en vallée du Rhône.
+
+Marseille
+Marseille (43.2965, 5.3698) bénéficie d'un climat méditerranéen. Étés chauds et secs, hivers doux. Peu de gel. Le vent dominant est le mistral.
+
+Toulouse
+Toulouse (43.6047, 1.4442) a un climat océanique dégradé. Étés chauds, hivers frais sans excès. La ville rose connaît des orages en été.
+
+Prévisions météo
+Pour obtenir les prévisions, utilisez les coordonnées GPS (latitude, longitude) ou sélectionnez une ville. Les données sont mises à jour et stockées en base pour consultation.

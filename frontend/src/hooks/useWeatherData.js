@@ -6,9 +6,10 @@ import { groupByCoords, mergeLocationsByCity, buildDatesByLoc } from "../utils/w
 /**
  * Hook pour charger et structurer les données météo.
  * Gère : fetch, regroupement par coordonnées, géocodage inverse, fusion par ville.
+ * @param {number} refreshTrigger - Incrémenter pour forcer un rechargement (ex: après fetch LocationSearch)
  * @returns {{ weather: array, locations: array, datesByLoc: object, loading: boolean, error: string|null }}
  */
-export function useWeatherData() {
+export function useWeatherData(refreshTrigger = 0) {
   const [weather, setWeather] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +36,7 @@ export function useWeatherData() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshTrigger]);
 
   const coordGroups = groupByCoords(weather);
   const coordKeys = coordGroups.map((g) => g.key).sort().join(",");

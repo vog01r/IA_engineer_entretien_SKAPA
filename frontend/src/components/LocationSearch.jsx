@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { weatherAPI } from "../services/api";
+import { geocode } from "../utils/geocoding";
 import { CITIES } from "../constants/cities";
 
-export default function LocationSearch() {
+export default function LocationSearch({ onFetchSuccess }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [isError, setIsError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchForCity = async (lat, lon, nom) => {
     setMessage(null);
@@ -20,6 +22,7 @@ export default function LocationSearch() {
           : `Prévisions pour ${nom} enregistrées.`;
       setMessage(msg);
       setIsError(false);
+      onFetchSuccess?.();
     } catch (err) {
       setMessage(err.message || "Erreur lors de la récupération de la météo.");
       setIsError(true);
@@ -34,8 +37,51 @@ export default function LocationSearch() {
         Charger des prévisions
       </h2>
       <p className="text-sm mb-4" style={{ color: "var(--color-muted)" }}>
-        Choisissez une ville pour enregistrer sa météo.
+        Choisissez une ville ou recherchez un lieu.
       </p>
+
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const q = searchQuery.trim();
+          if (!q || loading) return;
+          setMessage(null);
+          setLoading(true);
+          setIsError(false);
+          try {
+            const geo = await geocode(q);
+            if (!geo) {
+              setMessage(`Lieu « ${q} » introuvable.`);
+              setIsError(true);
+              return;
+            }
+            await fetchForCity(geo.lat, geo.lon, geo.label);
+            setSearchQuery("");
+          } catch (err) {
+            setMessage(err.message || "Erreur lors de la recherche.");
+            setIsError(true);
+          } finally {
+            setLoading(false);
+          }
+        }}
+        className="flex gap-2 mb-4"
+      >
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Ex: Louvain, Bruxelles, Tokyo…"
+          className="flex-1 skapa-input px-3 py-2 text-sm"
+          disabled={loading}
+        />
+        <button
+          type="submit"
+          disabled={loading || !searchQuery.trim()}
+          className="skapa-btn skapa-btn-primary px-4 py-2 text-sm"
+        >
+          Charger
+        </button>
+      </form>
 
       <div className="flex flex-wrap gap-2">
         {CITIES.map((ville) => (

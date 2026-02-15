@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useWeatherData } from "../hooks/useWeatherData";
 import { formatHeure, formatDateLabel } from "../utils/formatters";
 
-export default function WeatherDashboard() {
-  const { weather, locations, datesByLoc, loading, error } = useWeatherData();
+export default function WeatherDashboard({ refreshTrigger = 0 }) {
+  const { weather, locations, datesByLoc, loading, error } = useWeatherData(refreshTrigger);
   const [selectedLoc, setSelectedLoc] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 

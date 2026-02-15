@@ -1,9 +1,12 @@
+import { useState } from "react";
 import WeatherDashboard from "./components/WeatherDashboard";
 import LocationSearch from "./components/LocationSearch";
 import ChatInterface from "./components/ChatInterface";
 import "./App.css";
 
 function App() {
+  const [dashboardRefresh, setDashboardRefresh] = useState(0);
+
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
       <div className="max-w-6xl mx-auto px-5 py-10">
@@ -19,14 +22,14 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
             <section className="skapa-card p-6">
-              <LocationSearch />
+              <LocationSearch onFetchSuccess={() => setDashboardRefresh((k) => k + 1)} />
             </section>
             <section className="skapa-card p-6">
               <ChatInterface />
             </section>
           </div>
           <section className="skapa-card p-6">
-            <WeatherDashboard />
+            <WeatherDashboard refreshTrigger={dashboardRefresh} />
           </section>
         </div>
       </div>
