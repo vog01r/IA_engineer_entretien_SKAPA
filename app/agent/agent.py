@@ -1,12 +1,14 @@
-"""Agent IA avec RAG — injection contexte depuis base de connaissances."""
+"""Agent IA avec tools météo — géocodage, météo temps réel, tendances, alertes."""
+
+import json
 
 from openai import OpenAI
 
-from app.db.crud import search_chunks
+from app.agent.tools import OPENAI_TOOLS_DEFINITION, execute_tool
 
 
 class Agent:
-    """Agent conversationnel météo utilisant RAG pour enrichir les réponses."""
+    """Agent conversationnel météo avec function calling (geocode, météo, tendances, alertes)."""
 
     def __init__(self, model: str, api_key: str, provider: str = "openai"):
         self.model = model
@@ -18,46 +20,78 @@ class Agent:
         else:
             raise ValueError(f"Provider non supporté: {provider}. Utiliser 'openai'.")
 
-        # System prompt structuré (commit 2/4)
-        self.system_prompt = """Tu es un assistant de question-réponse basé sur une base de connaissances météo.
+        self.system_prompt = """Tu es un assistant météo conversationnel connecté à Telegram. Tu disposes d'outils pour :
+- géocoder un lieu (ville, pays dans le monde)
+- obtenir la météo actuelle et les prévisions
+- afficher la tendance des températures sur plusieurs jours
+- configurer des alertes personnalisées (seuils temp_min, temp_max)
+- lister les alertes de l'utilisateur
 
-RÈGLES STRICTES :
-1. Utilise UNIQUEMENT les informations présentes dans le contexte fourni
-2. Si l'information n'est pas dans le contexte, réponds : "Je ne dispose pas de cette information dans ma base de connaissances"
-3. Cite toujours le document source quand tu utilises une information
-4. Ne fais pas d'hypothèses ou d'extrapolations au-delà du contexte
-
-FORMAT DE RÉPONSE :
-- Réponds de manière concise et factuelle
-- Structure : réponse directe + source si applicable
-- Exemple : "D'après le guide météo, la température moyenne en hiver est de 5°C."
+RÈGLES :
+1. Utilise les outils pour répondre aux questions météo (ex: "Quel temps à Tokyo ?" → get_weather)
+2. Pour les tendances : "Montre-moi la tendance sur 7 jours à Lyon" → get_weather_trend
+3. Pour les alertes : "Préviens-moi si < 0°C à Paris" → set_alert avec temp_min=0
+4. Réponds en langage naturel, de façon concise et utile
+5. Si un lieu est introuvable, dis-le clairement
 """
 
-    def ask(self, question: str) -> str:
-        """Pose une question à l'agent avec injection du contexte RAG."""
+    def ask(self, question: str, chat_id: int | None = None) -> str:
+        """Pose une question à l'agent avec boucle tool calling."""
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": question},
+        ]
+        max_iterations = 5
+
         try:
-            # Récupérer le contexte depuis la base
-            context_chunks = search_chunks(question)
+            for _ in range(max_iterations):
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    tools=OPENAI_TOOLS_DEFINITION,
+                    tool_choice="auto",
+                    temperature=0.1,
+                )
 
-            # Gérer le cas où aucun contexte n'est trouvé
-            if not context_chunks:
-                return "Aucun contexte pertinent trouvé pour répondre à cette question."
+                choice = response.choices[0]
+                message = choice.message
 
-            context = "\n---\n".join([c["content"] for c in context_chunks])
+                if choice.finish_reason == "stop":
+                    return message.content or "Pas de réponse générée."
 
-            # Injecter le contexte dans les messages
-            messages = [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": f"Contexte:\n{context}\n\nQuestion: {question}"},
-            ]
+                if choice.finish_reason == "tool_calls" and message.tool_calls:
+                    messages.append({
+                        "role": "assistant",
+                        "content": message.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                            }
+                            for tc in message.tool_calls
+                        ],
+                    })
 
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.1,  # Bas pour Q&A factuel (cohérence, précision)
-            )
+                    for tc in message.tool_calls:
+                        name = tc.function.name
+                        try:
+                            args = json.loads(tc.function.arguments)
+                        except json.JSONDecodeError:
+                            args = {}
+                        result = execute_tool(name, args, chat_id=chat_id)
 
-            return response.choices[0].message.content or "Pas de réponse générée."
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": result,
+                        })
+
+                    continue
+
+                return message.content or "Pas de réponse générée."
+
+            return "Limite d'itérations atteinte. Réessaie avec une question plus simple."
 
         except Exception as e:
-            return f"Erreur lors du traitement de la question : {str(e)}"
+            return f"Erreur lors du traitement : {str(e)}"
