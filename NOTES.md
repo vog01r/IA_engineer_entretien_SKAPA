@@ -300,6 +300,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 18. `fix(frontend): regrouper les prévisions météo par lieu, limiter à 24h`
 19. `fix(ux): message météo avec résumé et layout 2 colonnes`
 20. `feat(deps): ajout python-telegram-bot pour bot Telegram`
+21. `feat(bot): implémentation bot Telegram météo + agent IA`
 
 ---
 
@@ -398,6 +399,38 @@ pip install python-telegram-bot
 ```
 
 **Note :** Sur macOS avec Python système, si besoin : `pip install python-telegram-bot --break-system-packages` (hors venv). Avec venv, normalement pas nécessaire.
+
+---
+
+## 21. Bot Telegram (feat(bot))
+
+**Objectif :** Bot Telegram pour météo et questions IA via polling.
+
+**Fichiers :**
+- `app/bot/__init__.py` — package
+- `app/bot/telegram_bot.py` — implémentation complète
+
+**Fonctionnalités :**
+1. **Commande /start** : message de bienvenue
+2. **Commande /help** : aide
+3. **Détection coordonnées** : regex `(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)` + validation lat [-90,90], lon [-180,180]
+4. **Météo** : appel direct Open-Meteo (sans passer par l'API backend) — température actuelle + code WMO → libellé français
+5. **Questions** : appel POST `/agent/ask` sur l'API backend (FastAPI) avec X-API-Key
+6. **Gestion d'erreur** : try/except sur RequestException et Exception, messages explicites
+
+**Trade-offs :**
+- **Open-Meteo direct** : le bot n'a pas besoin que l'API tourne pour la météo. Pour les questions IA, l'API doit être lancée.
+- **asyncio.to_thread** : `requests` est synchrone → exécution dans un thread pool pour ne pas bloquer l'event loop du bot.
+- **API_BASE_URL** : défaut `http://localhost:8000`, configurable via .env (pour prod ou autre host).
+
+**Variables .env requises :**
+- `TELEGRAM_BOT_TOKEN` (obligatoire)
+- `API_KEY` (pour appeler /agent/ask)
+- `API_BASE_URL` (optionnel, défaut localhost:8000)
+
+**Lancement :** `python -m app.bot.telegram_bot` (racine, venv activé)
+
+**Piège connu (.cursorrules) :** L'ancien fichier contenait des commentaires trompeurs (test technique). Ils ont été remplacés par l'implémentation fonctionnelle.
 
 ---
 
