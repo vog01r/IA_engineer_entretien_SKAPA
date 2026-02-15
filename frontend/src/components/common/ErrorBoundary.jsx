@@ -19,14 +19,13 @@ export default class ErrorBoundary extends Component {
             padding: "2rem",
             maxWidth: "600px",
             margin: "2rem auto",
-            background: "#fef2f2",
+            background: "var(--color-error-bg)",
             border: "1px solid #fecaca",
-            borderRadius: "8px",
-            color: "#991b1b",
-            fontFamily: "system-ui, sans-serif",
+            borderRadius: "12px",
+            color: "var(--color-error)",
           }}
         >
-          <h2 style={{ marginTop: 0 }}>Erreur</h2>
+          <h2 className="text-base font-semibold" style={{ marginTop: 0 }}>Erreur</h2>
           <pre style={{ overflow: "auto", whiteSpace: "pre-wrap", fontSize: "14px" }}>
             {this.state.error?.message || String(this.state.error)}
           </pre>

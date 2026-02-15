@@ -1,117 +1,172 @@
-import { useEffect, useState } from "react";
-import { weatherAPI } from "../services/api";
+import { useState } from "react";
+import { useWeatherData } from "../hooks/useWeatherData";
+import { formatHeure, formatDateLabel } from "../utils/formatters";
 
 export default function WeatherDashboard() {
-  const [weather, setWeather] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { weather, locations, datesByLoc, loading, error } = useWeatherData();
+  const [selectedLoc, setSelectedLoc] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  const selectedLocData = locations.find((l) => l.key === selectedLoc);
+  const datesForLoc = selectedLoc ? (datesByLoc[selectedLoc] ?? []) : [];
+  const selectedDateData =
+    selectedDate && selectedLocData
+      ? selectedLocData.forecasts
+          .filter((f) => f.time?.slice(0, 10) === selectedDate)
+          .sort((a, b) => (a.time || "").localeCompare(b.time || ""))
+      : [];
 
-    async function fetchWeather() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await weatherAPI.getAll();
-        if (!cancelled) {
-          setWeather(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || "Erreur lors du chargement des données météo");
-          setWeather([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
+  const handleLocChange = (e) => {
+    const key = e.target.value;
+    setSelectedLoc(key);
+    setSelectedDate("");
+    if (key && datesByLoc[key]?.length > 0) setSelectedDate(datesByLoc[key][0]);
+  };
 
-    fetchWeather();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const handleDateChange = (e) => setSelectedDate(e.target.value);
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Données météo</h2>
-        <p className="text-gray-600">Chargement...</p>
+      <div>
+        <h2 className="text-base font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+          Prévisions
+        </h2>
+        <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+          Chargement…
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Données météo</h2>
-        <p className="text-red-600">{error}</p>
+      <div>
+        <h2 className="text-base font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+          Prévisions
+        </h2>
+        <p className="text-sm" style={{ color: "var(--color-error)" }}>
+          {error}
+        </p>
       </div>
     );
   }
 
-  // Regrouper par lieu (latitude, longitude)
-  const groupByLocation = (data) => {
-    const groups = {};
-    data.forEach((item) => {
-      const key = `${item.latitude},${item.longitude}`;
-      if (!groups[key]) {
-        groups[key] = {
-          latitude: item.latitude,
-          longitude: item.longitude,
-          forecasts: [],
-        };
-      }
-      groups[key].forecasts.push(item);
-    });
-    return Object.values(groups);
-  };
-
-  const locations = groupByLocation(weather);
-
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Données météo</h2>
+    <div>
+      <h2 className="text-base font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+        Prévisions
+      </h2>
+      <p className="text-sm mb-5" style={{ color: "var(--color-muted)" }}>
+        Consultez les prévisions par ville et date.
+      </p>
 
       {weather.length === 0 ? (
-        <p className="text-gray-600">Aucune donnée météo stockée.</p>
+        <p className="text-sm py-2" style={{ color: "var(--color-muted)" }}>
+          Chargez une ville à gauche pour afficher les prévisions.
+        </p>
       ) : (
-        <div className="space-y-6">
-          {locations.map((loc) => {
-            const sortedForecasts = [...loc.forecasts].sort((a, b) =>
-              (a.time || "").localeCompare(b.time || "")
-            );
-            const next24h = sortedForecasts.slice(0, 24);
+        <>
+          <div className="flex flex-wrap gap-5 mb-6">
+            <div>
+              <label
+                htmlFor="ville-select"
+                className="block text-xs font-medium mb-1.5 uppercase tracking-wider"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Ville
+              </label>
+              <select
+                id="ville-select"
+                value={selectedLoc}
+                onChange={handleLocChange}
+                className="skapa-input px-3 py-2 min-w-[140px] text-sm"
+              >
+                <option value="">Choisir</option>
+                {locations.map((loc) => (
+                  <option key={loc.key} value={loc.key}>
+                    {loc.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="date-select"
+                className="block text-xs font-medium mb-1.5 uppercase tracking-wider"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Date
+              </label>
+              <select
+                id="date-select"
+                value={selectedDate}
+                onChange={handleDateChange}
+                disabled={!selectedLoc}
+                className="skapa-input px-3 py-2 min-w-[160px] text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">Choisir</option>
+                {datesForLoc.map((d) => (
+                  <option key={d} value={d}>
+                    {formatDateLabel(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-            return (
-              <div key={`${loc.latitude},${loc.longitude}`}>
-                <h3 className="text-lg font-semibold mb-3 text-gray-700">
-                  {loc.latitude}°, {loc.longitude}°
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {next24h.map((item) => (
-                    <div
-                      key={item.id ?? `${item.latitude}-${item.longitude}-${item.time}`}
-                      className="bg-white border border-gray-200 rounded-lg shadow p-4 text-gray-800"
+          {selectedDateData.length > 0 ? (
+            <div
+              className="overflow-hidden rounded-lg"
+              style={{ border: "1px solid var(--color-border)" }}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: "var(--color-bg)" }}>
+                    <th
+                      className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wider"
+                      style={{ color: "var(--color-muted)" }}
                     >
-                      <div className="font-medium text-sm truncate" title={item.time}>
-                        {item.time?.slice(0, 13) ?? "-"}
-                      </div>
-                      <div className="text-lg font-bold mt-1">
-                        {item.temperature_2m != null
-                          ? `${item.temperature_2m}°C`
-                          : "-"}
-                      </div>
-                    </div>
+                      Heure
+                    </th>
+                    <th
+                      className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wider"
+                      style={{ color: "var(--color-muted)" }}
+                    >
+                      Température
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedDateData.map((f, idx) => (
+                    <tr
+                      key={f.time}
+                      className="border-t"
+                      style={{
+                        borderColor: "var(--color-border)",
+                        background: idx % 2 === 1 ? "var(--color-bg)" : "transparent",
+                      }}
+                    >
+                      <td className="px-4 py-2.5" style={{ color: "var(--color-text)" }}>
+                        {formatHeure(f.time)}
+                      </td>
+                      <td className="px-4 py-2.5 font-medium" style={{ color: "var(--color-text)" }}>
+                        {f.temperature_2m != null ? `${Math.round(f.temperature_2m)}°C` : "—"}
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </tbody>
+              </table>
+            </div>
+          ) : selectedLoc && datesForLoc.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+              Aucune donnée pour ce lieu.
+            </p>
+          ) : selectedLoc ? (
+            <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+              Sélectionnez une date.
+            </p>
+          ) : null}
+        </>
       )}
     </div>
   );

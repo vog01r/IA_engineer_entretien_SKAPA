@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { weatherAPI } from "../services/api";
-
-// Villes prédéfinies : nom → [lat, lon] (conforme à la consigne "lieu donné")
-const VILLES = [
-  { nom: "Paris", lat: 48.8566, lon: 2.3522 },
-  { nom: "Lyon", lat: 45.764, lon: 4.8357 },
-  { nom: "Marseille", lat: 43.2965, lon: 5.3698 },
-  { nom: "Toulouse", lat: 43.6047, lon: 1.4442 },
-  { nom: "Bordeaux", lat: 44.8378, lon: -0.5792 },
-];
+import { CITIES } from "../constants/cities";
 
 export default function LocationSearch() {
   const [loading, setLoading] = useState(false);
@@ -37,20 +29,22 @@ export default function LocationSearch() {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow p-6">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Récupérer la météo</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Sélectionnez une ville pour récupérer les prévisions météo.
+    <div>
+      <h2 className="text-base font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+        Charger des prévisions
+      </h2>
+      <p className="text-sm mb-4" style={{ color: "var(--color-muted)" }}>
+        Choisissez une ville pour enregistrer sa météo.
       </p>
 
       <div className="flex flex-wrap gap-2">
-        {VILLES.map((ville) => (
+        {CITIES.map((ville) => (
           <button
             key={ville.nom}
             type="button"
             onClick={() => fetchForCity(ville.lat, ville.lon, ville.nom)}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+            className="skapa-btn skapa-btn-primary px-4 py-2 text-sm"
           >
             {ville.nom}
           </button>
@@ -59,9 +53,11 @@ export default function LocationSearch() {
 
       {message && (
         <div
-          className={`mt-4 p-3 rounded ${
-            isError ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-          }`}
+          className="mt-4 px-3 py-2.5 rounded-lg text-sm"
+          style={{
+            background: isError ? "var(--color-error-bg)" : "var(--color-success-bg)",
+            color: isError ? "var(--color-error)" : "var(--color-success)",
+          }}
         >
           {message}
         </div>
