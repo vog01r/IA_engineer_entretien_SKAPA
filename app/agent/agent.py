@@ -39,9 +39,16 @@ RÈGLES :
 
     def ask(self, question: str, chat_id: int | None = None) -> str:
         """Pose une question à l'agent avec boucle tool calling."""
+        user_content = question
+        if chat_id is None:
+            user_content = (
+                "[Contexte: utilisation depuis le web, pas de chat_id. "
+                "N'utilise QUE get_weather et get_weather_trend. Si l'utilisateur ne précise pas de lieu, demande-le.]\n\n"
+                + question
+            )
         messages = [
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": question},
+            {"role": "user", "content": user_content},
         ]
         max_iterations = 5
 
