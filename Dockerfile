@@ -18,4 +18,5 @@ COPY main.py .
 EXPOSE 8000
 
 # Créer les tables au démarrage, puis lancer uvicorn (sans reload en prod)
-CMD ["sh", "-c", "python -c \"from app.db.crud import create_tables; create_tables()\" && uvicorn app.app:app --host 0.0.0.0 --port 8000"]
+# PORT injecté par Railway au runtime
+CMD ["sh", "-c", "python -c \"from app.db.crud import create_tables; create_tables()\" && uvicorn app.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
