@@ -49,6 +49,13 @@ def create_tables():
             )"""
         )
 
+        c.execute("PRAGMA table_info(weather_alerts)")
+        columns = [row[1] for row in c.fetchall()]
+        if "temp_min" not in columns:
+            c.execute("ALTER TABLE weather_alerts ADD COLUMN temp_min REAL")
+        if "temp_max" not in columns:
+            c.execute("ALTER TABLE weather_alerts ADD COLUMN temp_max REAL")
+
         conn.commit()
 
 
@@ -180,18 +187,27 @@ def get_conversations(limit: int = 20):
 # ──────────────── Alertes proactives (bot Telegram) ────────────────
 
 
-def upsert_alert(chat_id: int, latitude: float, longitude: float, label: str):
+def upsert_alert(
+    chat_id: int,
+    latitude: float,
+    longitude: float,
+    label: str,
+    temp_min: float | None = None,
+    temp_max: float | None = None,
+):
     with sqlite3.connect(DATABASE_PATH) as conn:
         c = conn.cursor()
         c.execute(
-            """INSERT INTO weather_alerts (chat_id, latitude, longitude, label)
-               VALUES (?, ?, ?, ?)
+            """INSERT INTO weather_alerts (chat_id, latitude, longitude, label, temp_min, temp_max)
+               VALUES (?, ?, ?, ?, ?, ?)
                ON CONFLICT(chat_id) DO UPDATE SET
                  latitude=excluded.latitude,
                  longitude=excluded.longitude,
                  label=excluded.label,
+                 temp_min=excluded.temp_min,
+                 temp_max=excluded.temp_max,
                  created_at=datetime('now')""",
-            (chat_id, latitude, longitude, label),
+            (chat_id, latitude, longitude, label, temp_min, temp_max),
         )
         conn.commit()
 
