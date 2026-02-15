@@ -10,9 +10,9 @@ from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
-from telegram import BotCommand, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from app.db.crud import create_tables, delete_alert, get_alert, get_all_alerts, upsert_alert
 
@@ -137,12 +137,34 @@ async def start(update: Update, context) -> None:
     welcome = """
 🌤️ Bot Météo SKAPA
 
-• Météo : tapez un lieu (ville, pays) ou des coordonnées (48.8, 2.3)
-• Alertes : /alertes on [ville] → canicule & froid extrême (toute ville)
-• Questions : posez une question, j'interroge l'agent IA
-• /help pour plus d'infos
+• /meteo — Météo d'une ville.
+• /alertes — Alertes (on [ville] | off | status).
+• Pose une question — Météo, tendances, alertes personnalisées en langage naturel.
+• /help — Aide.
 """
     await update.message.reply_text(welcome)
+
+
+async def meteo_command(update: Update, context) -> None:
+    """Handler /meteo [ville] — météo directe avec boutons."""
+    args = context.args or []
+    place = " ".join(args).strip()
+    if not place:
+        await update.message.reply_text("Écris la ville dont tu veux la météo.")
+        return
+    await update.effective_chat.send_chat_action(ChatAction.TYPING)
+    geo = await geocode_place(place)
+    if not geo:
+        await update.message.reply_text(f"❌ Lieu « {place} » introuvable.")
+        return
+    lat, lon, label = geo
+    try:
+        weather = await fetch_weather_api(lat, lon)
+        msg = _format_weather_msg(weather, label)
+        await update.message.reply_text(msg, reply_markup=_weather_inline_keyboard())
+    except requests.RequestException as e:
+        logger.exception("Erreur Open-Meteo")
+        await update.message.reply_text(f"❌ Erreur météo : {e}")
 
 
 async def help_command(update: Update, context) -> None:
@@ -150,9 +172,10 @@ async def help_command(update: Update, context) -> None:
     help_text = """
 📖 Aide
 
-• Météo : n'importe quelle ville ou lieu (Paris, Tokyo, New York...) ou coordonnées lat,lon
-• Alertes : /alertes on [ville] → alerte canicule/froid (toute ville)
-• Questions : l'agent IA répond via la base de connaissances (API doit tourner)
+• Météo : /meteo [ville] ou "Quel temps à Paris ?"
+• Tendances : "Montre-moi la tendance sur 7 jours à Lyon"
+• Alertes : /alertes on [ville] ou "Préviens-moi si < 0°C à Paris"
+• L'API doit tourner pour que l'agent réponde
 """
     await update.message.reply_text(help_text)
 
@@ -171,7 +194,13 @@ async def alertes_command(update: Update, context) -> None:
     if sub in ("", "status"):
         alert = get_alert(chat_id)
         if alert:
-            await update.message.reply_text(f"📍 Alerte active : {alert['label']}")
+            extra = []
+            if alert.get("temp_min") is not None:
+                extra.append(f"froid < {alert['temp_min']}°C")
+            if alert.get("temp_max") is not None:
+                extra.append(f"chaleur > {alert['temp_max']}°C")
+            suffix = f" ({', '.join(extra)})" if extra else " (défaut 35°C/-5°C)"
+            await update.message.reply_text(f"📍 Alerte active : {alert['label']}{suffix}")
         else:
             await update.message.reply_text("Aucune alerte. Tape /alertes on [ville] pour t'abonner.")
         return
@@ -240,21 +269,34 @@ async def fetch_weather_api(lat: float, lon: float) -> dict:
     return await asyncio.to_thread(_fetch_weather_sync, lat, lon)
 
 
-def _ask_agent_sync(question: str) -> str:
+def _ask_agent_sync(question: str, chat_id: int | None = None) -> str:
     """Appelle l'agent via API backend (synchrone)."""
     url = f"{API_BASE_URL.rstrip('/')}/agent/ask"
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
+    payload = {"question": question}
+    if chat_id is not None:
+        payload["chat_id"] = chat_id
     response = requests.post(
-        url, json={"question": question}, headers=headers, timeout=15
+        url, json=payload, headers=headers, timeout=30
     )
     response.raise_for_status()
     data = response.json()
     return data.get("answer", "Pas de réponse")
 
 
-async def ask_agent_api(question: str) -> str:
+async def ask_agent_api(question: str, chat_id: int | None = None) -> str:
     """Appelle l'agent via API backend (non bloquant)."""
-    return await asyncio.to_thread(_ask_agent_sync, question)
+    return await asyncio.to_thread(_ask_agent_sync, question, chat_id)
+
+
+def _weather_inline_keyboard() -> InlineKeyboardMarkup:
+    """Boutons après une réponse météo."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📍 Autre ville", callback_data="autre_ville"),
+            InlineKeyboardButton("🔔 Activer les alertes", callback_data="activer_alertes"),
+        ],
+    ])
 
 
 def _format_weather_msg(weather: dict, location: str) -> str:
@@ -281,50 +323,16 @@ def _format_weather_msg(weather: dict, location: str) -> str:
 
 
 async def handle_message(update: Update, context) -> None:
-    """Handler : ville ou coordonnées → météo, sinon → agent IA."""
+    """Handler : tous les messages passent par l'agent IA avec tools météo."""
     text = update.message.text.strip()
     if not text:
-        await update.message.reply_text("Envoie une ville, des coordonnées (48.8, 2.3) ou une question.")
+        await update.message.reply_text("Envoie une ville, une question météo ou une demande d'alerte.")
         return
 
-    # 1) Coordonnées → météo
-    coords = is_coordinates(text)
-    if coords:
-        lat, lon = coords
-        await update.effective_chat.send_chat_action(ChatAction.TYPING)
-        try:
-            weather = await fetch_weather_api(lat, lon)
-            msg = _format_weather_msg(weather, f"{lat}, {lon}")
-            await update.message.reply_text(msg)
-        except requests.RequestException as e:
-            logger.exception("Erreur Open-Meteo")
-            await update.message.reply_text(f"❌ Erreur météo : {e}")
-        except Exception as e:
-            logger.exception("Erreur inattendue météo")
-            await update.message.reply_text(f"❌ Erreur : {e}")
-        return
-
-    # 2) Lieu (géocodage) → météo
-    geo = await geocode_place(text)
-    if geo:
-        lat, lon, label = geo
-        await update.effective_chat.send_chat_action(ChatAction.TYPING)
-        try:
-            weather = await fetch_weather_api(lat, lon)
-            msg = _format_weather_msg(weather, label)
-            await update.message.reply_text(msg)
-        except requests.RequestException as e:
-            logger.exception("Erreur Open-Meteo")
-            await update.message.reply_text(f"❌ Erreur météo : {e}")
-        except Exception as e:
-            logger.exception("Erreur inattendue météo")
-            await update.message.reply_text(f"❌ Erreur : {e}")
-        return
-
-    # 3) Question → agent IA
+    chat_id = update.effective_chat.id
     await update.effective_chat.send_chat_action(ChatAction.TYPING)
     try:
-        answer = await ask_agent_api(text)
+        answer = await ask_agent_api(text, chat_id=chat_id)
         await update.message.reply_text(f"🤖 {answer}")
     except requests.RequestException as e:
         logger.warning("Erreur API agent: %s", e)
@@ -336,8 +344,18 @@ async def handle_message(update: Update, context) -> None:
         await update.message.reply_text(f"❌ Erreur : {e}")
 
 
+async def callback_buttons(update: Update, context) -> None:
+    """Handler pour boutons inline après météo."""
+    query = update.callback_query
+    await query.answer()
+    if query.data == "autre_ville":
+        await query.message.reply_text("Écris la ville dont tu veux la météo 😊")
+    elif query.data == "activer_alertes":
+        await query.message.reply_text("Pour activer : /alertes on [ville] — ex: /alertes on Paris")
+
+
 async def _run_alert_checks(app: Application) -> None:
-    """Vérifie les alertes toutes les heures. Envoie msg si canicule ou froid extrême."""
+    """Vérifie les alertes toutes les heures. Seuils personnalisés ou par défaut."""
     interval = int(os.getenv("ALERT_CHECK_INTERVAL_SEC", "3600"))  # 1h par défaut
     while True:
         await asyncio.sleep(interval)
@@ -348,15 +366,23 @@ async def _run_alert_checks(app: Application) -> None:
                 temp = (weather.get("current") or {}).get("temperature_2m")
                 if temp is None:
                     continue
-                if temp >= ALERT_TEMP_HIGH:
+
+                temp_max = row.get("temp_max")
+                temp_min = row.get("temp_min")
+                if temp_max is None:
+                    temp_max = ALERT_TEMP_HIGH
+                if temp_min is None:
+                    temp_min = ALERT_TEMP_LOW
+
+                if temp >= temp_max:
                     await app.bot.send_message(
                         row["chat_id"],
-                        f"⚠️ Canicule à {row['label']} : {temp:.0f}°C !",
+                        f"⚠️ Alerte chaleur à {row['label']} : {temp:.0f}°C (seuil {temp_max}°C) !",
                     )
-                elif temp <= ALERT_TEMP_LOW:
+                elif temp <= temp_min:
                     await app.bot.send_message(
                         row["chat_id"],
-                        f"⚠️ Froid extrême à {row['label']} : {temp:.0f}°C !",
+                        f"⚠️ Alerte froid à {row['label']} : {temp:.0f}°C (seuil {temp_min}°C) !",
                     )
             except Exception as e:
                 logger.warning("Erreur alerte pour chat_id=%s: %s", row["chat_id"], e)
@@ -371,6 +397,7 @@ def main() -> None:
     async def post_init(app: Application):
         await app.bot.set_my_commands([
             BotCommand("start", "Démarrer le bot"),
+            BotCommand("meteo", "Météo d'une ville"),
             BotCommand("help", "Aide"),
             BotCommand("alertes", "Alertes canicule/froid (on [ville] | off)"),
         ])
@@ -378,8 +405,10 @@ def main() -> None:
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("meteo", meteo_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("alertes", alertes_command))
+    app.add_handler(CallbackQueryHandler(callback_buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.info("🤖 Bot Telegram démarré (polling mode)")
