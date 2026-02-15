@@ -14,6 +14,8 @@ from telegram import Update
 from telegram.constants import ChatAction
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
+from app.db.crud import create_tables, delete_alert, get_alert, get_all_alerts, upsert_alert
+
 load_dotenv()
 
 logging.basicConfig(
@@ -25,6 +27,10 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 API_KEY = os.getenv("API_KEY", "")
+
+# Seuils alerte : canicule >= 35°C, froid extrême <= -5°C (Météo France)
+ALERT_TEMP_HIGH = 35
+ALERT_TEMP_LOW = -5
 
 # Mapping WMO weather code → libellé français (aligné avec weather.py)
 WMO_WEATHER_LABELS = {
@@ -132,7 +138,8 @@ async def start(update: Update, context) -> None:
 🌤️ Bot Météo SKAPA
 
 • Météo : tapez un lieu (ville, pays) ou des coordonnées (48.8, 2.3)
-• Questions : posez une question et j'interroge l'agent IA
+• Alertes : /alertes on [ville] → canicule & froid extrême (toute ville)
+• Questions : posez une question, j'interroge l'agent IA
 • /help pour plus d'infos
 """
     await update.message.reply_text(welcome)
@@ -144,9 +151,61 @@ async def help_command(update: Update, context) -> None:
 📖 Aide
 
 • Météo : n'importe quelle ville ou lieu (Paris, Tokyo, New York...) ou coordonnées lat,lon
+• Alertes : /alertes on [ville] → alerte canicule/froid (toute ville)
 • Questions : l'agent IA répond via la base de connaissances (API doit tourner)
 """
     await update.message.reply_text(help_text)
+
+
+async def alertes_command(update: Update, context) -> None:
+    """Handler /alertes on [lieu] | off | status."""
+    chat_id = update.effective_chat.id
+    args = (context.args or [])
+    sub = " ".join(args).strip().lower() if args else ""
+
+    if sub == "off":
+        delete_alert(chat_id)
+        await update.message.reply_text("🔕 Alertes désactivées.")
+        return
+
+    if sub in ("", "status"):
+        alert = get_alert(chat_id)
+        if alert:
+            await update.message.reply_text(f"📍 Alerte active : {alert['label']}")
+        else:
+            await update.message.reply_text("Aucune alerte. Tape /alertes on [ville] pour t'abonner.")
+        return
+
+    # /alertes on [ville] — toute ville du monde via géocodage
+    if sub.startswith("on "):
+        place = sub[3:].strip()
+    elif sub != "on":
+        place = sub
+    else:
+        place = ""
+    if not place:
+        await update.message.reply_text("Usage : /alertes on [ville] — ex: /alertes on Tokyo")
+        return
+
+    geo = await geocode_place(place)
+    if not geo:
+        await update.message.reply_text(f"❌ Lieu « {place} » introuvable.")
+        return
+    lat, lon, label = geo
+    upsert_alert(chat_id, lat, lon, label)
+    await update.message.reply_text(f"🔔 Alertes activées pour {label} (canicule >35°C, froid <-5°C)")
+
+    # Vérification immédiate : envoie l'alerte si conditions extrêmes maintenant
+    try:
+        weather = await fetch_weather_api(lat, lon)
+        temp = (weather.get("current") or {}).get("temperature_2m")
+        if temp is not None:
+            if temp >= ALERT_TEMP_HIGH:
+                await update.message.reply_text(f"⚠️ Canicule à {label} : {temp:.0f}°C !")
+            elif temp <= ALERT_TEMP_LOW:
+                await update.message.reply_text(f"⚠️ Froid extrême à {label} : {temp:.0f}°C !")
+    except Exception as e:
+        logger.warning("Vérification immédiate alerte: %s", e)
 
 
 def is_coordinates(text: str) -> tuple[float, float] | None:
@@ -277,14 +336,45 @@ async def handle_message(update: Update, context) -> None:
         await update.message.reply_text(f"❌ Erreur : {e}")
 
 
+async def _run_alert_checks(app: Application) -> None:
+    """Vérifie les alertes toutes les heures. Envoie msg si canicule ou froid extrême."""
+    interval = int(os.getenv("ALERT_CHECK_INTERVAL_SEC", "3600"))  # 1h par défaut
+    while True:
+        await asyncio.sleep(interval)
+        alerts = get_all_alerts()
+        for row in alerts:
+            try:
+                weather = await fetch_weather_api(row["latitude"], row["longitude"])
+                temp = (weather.get("current") or {}).get("temperature_2m")
+                if temp is None:
+                    continue
+                if temp >= ALERT_TEMP_HIGH:
+                    await app.bot.send_message(
+                        row["chat_id"],
+                        f"⚠️ Canicule à {row['label']} : {temp:.0f}°C !",
+                    )
+                elif temp <= ALERT_TEMP_LOW:
+                    await app.bot.send_message(
+                        row["chat_id"],
+                        f"⚠️ Froid extrême à {row['label']} : {temp:.0f}°C !",
+                    )
+            except Exception as e:
+                logger.warning("Erreur alerte pour chat_id=%s: %s", row["chat_id"], e)
+
+
 def main() -> None:
     """Lance le bot en mode polling."""
     if not TELEGRAM_BOT_TOKEN:
         raise SystemExit("TELEGRAM_BOT_TOKEN manquant dans .env")
+    create_tables()
 
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    async def post_init(app: Application):
+        asyncio.create_task(_run_alert_checks(app))
+
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("alertes", alertes_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.info("🤖 Bot Telegram démarré (polling mode)")

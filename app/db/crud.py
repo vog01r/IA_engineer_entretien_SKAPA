@@ -39,6 +39,16 @@ def create_tables():
             )"""
         )
 
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS weather_alerts (
+                chat_id INTEGER PRIMARY KEY,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                label TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now'))
+            )"""
+        )
+
         conn.commit()
 
 
@@ -99,25 +109,42 @@ def insert_chunk(source_file: str, content: str, chunk_index: int = 0):
         conn.commit()
 
 
+def _extract_keywords(query: str, min_len: int = 3) -> list[str]:
+    """Extrait les mots significatifs (exclut stopwords courants)."""
+    stopwords = {"quel", "quelle", "quels", "quelles", "le", "la", "les", "un", "une", "du", "des", "et", "ou", "en", "au", "aux", "à", "a", "est", "sont", "fait", "il", "elle"}
+    words = "".join(c if c.isalnum() or c in " -" else " " for c in query.lower()).split()
+    return [w for w in words if len(w) >= min_len and w not in stopwords]
+
+
 def search_chunks(query: str, limit: int = 5):
     """Recherche dans la base de connaissances.
 
-    Utilise une recherche LIKE (lexicale, par sous-chaîne).
-    Le terme de requête doit apparaître littéralement dans le contenu.
+    Stratégie : extrait les mots-clés de la requête, cherche les chunks
+    contenant AU MOINS un de ces mots (OR). Améliore le recall pour
+    des questions en langage naturel ("quelle météo à Paris" → Paris, météo).
 
-    Limitation : pas de recherche sémantique.
-    Exemple : "quel temps fait-il ?" ne trouvera pas "prévisions météorologiques".
-    Pour la production : migration vers PostgreSQL + pgvector ou ChromaDB recommandée.
-
-    Gardé en l'état pour ce test (scope limité).
+    Limitation : recherche lexicale, pas sémantique.
+    Pour la production : migration vers pgvector/ChromaDB recommandée.
     """
+    keywords = _extract_keywords(query)
+    if not keywords:
+        keywords = [query.strip()[:50]] if query.strip() else [""]
+
     with sqlite3.connect(DATABASE_PATH) as conn:
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
-        c.execute(
-            "SELECT * FROM knowledge_chunks WHERE content LIKE ? LIMIT ?",
-            (f"%{query}%", limit),
-        )
+        if len(keywords) == 1 and keywords[0]:
+            c.execute(
+                "SELECT * FROM knowledge_chunks WHERE content LIKE ? LIMIT ?",
+                (f"%{keywords[0]}%", limit),
+            )
+        else:
+            placeholders = " OR ".join(["content LIKE ?"] * len(keywords))
+            params = [f"%{k}%" for k in keywords] + [limit]
+            c.execute(
+                f"SELECT * FROM knowledge_chunks WHERE {placeholders} LIMIT ?",
+                params,
+            )
         return [dict(r) for r in c.fetchall()]
 
 
@@ -147,4 +174,47 @@ def get_conversations(limit: int = 20):
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute("SELECT * FROM conversations ORDER BY created_at DESC LIMIT ?", (limit,))
+        return [dict(r) for r in c.fetchall()]
+
+
+# ──────────────── Alertes proactives (bot Telegram) ────────────────
+
+
+def upsert_alert(chat_id: int, latitude: float, longitude: float, label: str):
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO weather_alerts (chat_id, latitude, longitude, label)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(chat_id) DO UPDATE SET
+                 latitude=excluded.latitude,
+                 longitude=excluded.longitude,
+                 label=excluded.label,
+                 created_at=datetime('now')""",
+            (chat_id, latitude, longitude, label),
+        )
+        conn.commit()
+
+
+def delete_alert(chat_id: int):
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute("DELETE FROM weather_alerts WHERE chat_id = ?", (chat_id,))
+        conn.commit()
+
+
+def get_alert(chat_id: int) -> dict | None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM weather_alerts WHERE chat_id = ?", (chat_id,))
+        r = c.fetchone()
+        return dict(r) if r else None
+
+
+def get_all_alerts():
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM weather_alerts")
         return [dict(r) for r in c.fetchall()]

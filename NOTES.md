@@ -303,6 +303,7 @@ ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") i
 21. `feat(bot): implémentation bot Telegram météo + agent IA`
 21b. `feat(bot): améliorations — villes, typing, prévisions`
 21c. `feat(bot): géocodage Open-Meteo pour toute ville du monde`
+21d. `feat(bot): alertes proactives canicule/froid extrême`
 
 ---
 
@@ -461,6 +462,21 @@ pip install python-telegram-bot
 - Affichage : "Paris, France" ou "Tokyo, Japan" (nom + pays)
 
 **Trade-off :** Latence +1 requête HTTP pour le géocodage. Gratuit, pas de clé API.
+
+---
+
+## 21d. Alertes proactives (feat(bot))
+
+**Contexte consigne :** "Peut éventuellement envoyer des alertes proactives (froid extrême, canicule, etc.)"
+
+**Implémentation minimaliste :**
+- **Stockage :** table `weather_alerts(chat_id, latitude, longitude, label)` — 1 alerte par utilisateur
+- **Commandes :** `/alertes on Paris` (ou `/alertes Paris`), `/alertes off`, `/alertes` (status)
+- **Job :** boucle asyncio toutes les 1h (`ALERT_CHECK_INTERVAL_SEC`, défaut 3600)
+- **Seuils :** canicule ≥ 35°C, froid extrême ≤ -5°C (référence Météo France)
+- **post_init** PTB pour lancer la tâche en arrière-plan
+
+**Pas de cooldown** : si conditions extrêmes pendant plusieurs heures, une alerte par cycle (1h).
 
 ---
 
