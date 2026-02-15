@@ -42,34 +42,48 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow p-4">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Chat Agent</h2>
+    <div>
+      <h2 className="text-base font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+        Chat
+      </h2>
+      <p className="text-sm mb-4" style={{ color: "var(--color-muted)" }}>
+        Posez une question sur la météo.
+      </p>
 
-      <div className="h-96 overflow-y-auto border border-gray-200 rounded-md p-3 mb-4 bg-gray-50">
+      <div
+        className="h-72 overflow-y-auto rounded-lg p-3 mb-4"
+        style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+      >
         {messages.length === 0 && !loading && (
-          <p className="text-gray-500 text-sm">Posez une question à l'agent météo.</p>
+          <p className="text-sm py-2" style={{ color: "var(--color-muted)" }}>
+            Par ex. : « Quel temps à Paris ? » ou « Tendances à Lyon »
+          </p>
         )}
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`mb-3 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`mb-2.5 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] px-4 py-2 rounded-lg ${
+              className="max-w-[85%] px-3.5 py-2 rounded-lg text-sm break-words whitespace-pre-wrap"
+              style={
                 msg.role === "user"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-800"
-              }`}
+                  ? { background: "var(--color-accent)", color: "white" }
+                  : { background: "var(--color-border)", color: "var(--color-text)" }
+              }
             >
               {msg.content}
             </div>
           </div>
         ))}
         {loading && (
-          <div className="flex justify-start mb-3">
-            <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
-              Réflexion...
-            </div>
+          <div className="flex justify-start mb-2.5">
+            <span
+              className="px-3.5 py-2 rounded-lg text-sm"
+              style={{ background: "var(--color-border)", color: "var(--color-muted)" }}
+            >
+              Réflexion…
+            </span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -80,14 +94,14 @@ export default function ChatInterface() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Votre question..."
-          className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Votre question…"
+          className="flex-1 skapa-input px-3 py-2 text-sm"
           disabled={loading}
         />
         <button
           type="submit"
           disabled={loading || !input.trim()}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-md transition-colors"
+          className="skapa-btn skapa-btn-primary px-4 py-2 text-sm"
         >
           Envoyer
         </button>
