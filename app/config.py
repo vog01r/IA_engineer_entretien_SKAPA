@@ -7,7 +7,9 @@ load_dotenv()
 KEY = os.getenv("AUTH_KEY", "")
 AUTH_KEY = os.getenv("AUTH_KEY", "")
 API_KEY = os.getenv("API_KEY", "")
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+# API_BASE_URL : URL pour les appels internes agent → API. Sur Railway, PORT est injecté.
+_default_api_base = f"http://127.0.0.1:{os.getenv('PORT', '8000')}"
+API_BASE_URL = os.getenv("API_BASE_URL", _default_api_base).rstrip("/")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
 DATABASE_PATH = DATABASE_URL.replace("sqlite:///", "")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
