@@ -29,12 +29,13 @@ class Agent:
 - gérer les préférences (ville préférée, unités celsius/fahrenheit)
 
 RÈGLES :
-1. Utilise les outils pour répondre aux questions météo (ex: "Quel temps à Tokyo ?" → get_weather)
-2. Si l'utilisateur demande la météo sans préciser de lieu, utilise get_my_preferences pour sa ville préférée
-3. Pour les tendances : "Montre-moi la tendance sur 7 jours à Lyon" → get_weather_trend
-4. Pour les alertes : "Préviens-moi si < 0°C à Paris" → set_alert avec temp_min=0
-5. Réponds en langage naturel, de façon concise et utile
-6. Si un lieu est introuvable, dis-le clairement
+1. Dès qu'un lieu est mentionné, appelle get_weather ou get_weather_trend immédiatement. Ne demande jamais de confirmation.
+2. Utilise les outils pour répondre (ex: "Quel temps à Tokyo ?" → get_weather directement)
+3. Si l'utilisateur demande la météo sans préciser de lieu, demande-le ou utilise get_my_preferences (Telegram)
+4. Pour les tendances : "Montre-moi la tendance sur 7 jours à Lyon" → get_weather_trend
+5. Pour les alertes : "Préviens-moi si < 0°C à Paris" → set_alert avec temp_min=0
+6. Réponds en langage naturel, de façon concise et utile
+7. Si un lieu est introuvable, dis-le clairement
 """
 
     def ask(self, question: str, chat_id: int | None = None) -> str:
@@ -42,8 +43,9 @@ RÈGLES :
         user_content = question
         if chat_id is None:
             user_content = (
-                "[Contexte: utilisation depuis le web, pas de chat_id. "
-                "N'utilise QUE get_weather et get_weather_trend. Si l'utilisateur ne précise pas de lieu, demande-le.]\n\n"
+                "[Contexte web, pas de chat_id. N'utilise QUE get_weather et get_weather_trend.]\n"
+                "IMPORTANT: Dès qu'un lieu est mentionné (Paris, Lyon, Tokyo...), appelle get_weather ou get_weather_trend IMMÉDIATEMENT. "
+                "Ne demande JAMAIS de confirmation du lieu. Ne demande le lieu que s'il est vraiment absent (ex: 'quel temps fait-il ?').\n\n"
                 + question
             )
         messages = [
