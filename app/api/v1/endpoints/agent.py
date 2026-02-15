@@ -17,6 +17,7 @@ agent = Agent(
 
 class QuestionRequest(BaseModel):
     question: str
+    chat_id: int | None = None
 
 
 @router.get("/")
@@ -27,6 +28,6 @@ async def agent_root():
 
 @router.post("/ask")
 def ask_agent(request: QuestionRequest):
-    """Pose une question à l'agent RAG."""
-    answer = agent.ask(request.question)
+    """Pose une question à l'agent avec tools météo (chat_id optionnel pour alertes)."""
+    answer = agent.ask(request.question, chat_id=request.chat_id)
     return {"answer": answer}
