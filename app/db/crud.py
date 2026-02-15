@@ -56,6 +56,16 @@ def create_tables():
         if "temp_max" not in columns:
             c.execute("ALTER TABLE weather_alerts ADD COLUMN temp_max REAL")
 
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS user_preferences (
+                chat_id INTEGER PRIMARY KEY,
+                preferred_city TEXT,
+                units TEXT DEFAULT 'celsius',
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )"""
+        )
+
         conn.commit()
 
 
@@ -234,3 +244,34 @@ def get_all_alerts():
         c = conn.cursor()
         c.execute("SELECT * FROM weather_alerts")
         return [dict(r) for r in c.fetchall()]
+
+
+# ──────────────── Préférences utilisateur ────────────────
+
+
+def get_preferences(chat_id: int) -> dict | None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM user_preferences WHERE chat_id = ?", (chat_id,))
+        r = c.fetchone()
+        return dict(r) if r else None
+
+
+def upsert_preferences(chat_id: int, preferred_city: str | None = None, units: str | None = None):
+    current = get_preferences(chat_id) or {}
+    pc = preferred_city if preferred_city is not None else (current.get("preferred_city") or "")
+    u = units if units is not None else (current.get("units") or "celsius")
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO user_preferences (chat_id, preferred_city, units, updated_at)
+               VALUES (?, ?, ?, datetime('now'))
+               ON CONFLICT(chat_id) DO UPDATE SET
+                 preferred_city = excluded.preferred_city,
+                 units = excluded.units,
+                 updated_at = datetime('now')
+            """,
+            (chat_id, pc, u),
+        )
+        conn.commit()

@@ -1,39 +1,36 @@
-"""Tools pour l'agent météo : géocodage, météo, tendances, alertes."""
+"""Tools pour l'agent météo : géocodage, météo, tendances, alertes.
+
+Architecture : l'agent passe par l'API FastAPI pour la météo (/weather/fetch, /location, /range).
+Géocodage reste direct (Open-Meteo Geocoding) — non exposé par l'API.
+"""
 
 import json
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
 import requests
 
-from app.db.crud import get_alert, insert_weather, upsert_alert
+from app.config import API_BASE_URL, API_KEY
+from app.db.crud import get_alert, get_preferences, upsert_alert, upsert_preferences
 
-OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_GEOCODING = "https://geocoding-api.open-meteo.com/v1/search"
 
 _STOPWORDS = {"météo", "temps", "quel", "quelle", "quelles", "à", "dans", "pour", "fait", "il", "et", "le", "la", "les", "des", "un", "une", "de", "du"}
 _NON_PLACE = {"hello", "salut", "coucou", "ok", "oui", "non", "merci", "bonjour", "aurevoir", "hi", "hey"}
 
-WMO_WEATHER_LABELS = {
-    0: "ciel dégagé",
-    1: "principalement dégagé",
-    2: "partiellement couvert",
-    3: "couvert",
-    45: "brouillard",
-    48: "brouillard givrant",
-    51: "bruine légère",
-    53: "bruine modérée",
-    55: "bruine dense",
-    61: "pluie légère",
-    63: "pluie modérée",
-    65: "pluie forte",
-    71: "neige légère",
-    73: "neige modérée",
-    75: "neige forte",
-    80: "averses légères",
-    81: "averses modérées",
-    82: "averses violentes",
-    95: "orage",
-}
+
+def _call_weather_api(path: str, params: dict) -> dict | None:
+    """Appelle l'API FastAPI weather. Retourne le JSON ou None en cas d'erreur."""
+    if not API_KEY:
+        return {"error": "API_KEY non configurée — impossible d'appeler l'API météo"}
+    url = f"{API_BASE_URL}/weather{path}"
+    headers = {"X-API-Key": API_KEY}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        return {"error": f"Erreur API météo: {e}"}
 
 
 def _extract_place_query(text: str) -> str:
@@ -46,12 +43,6 @@ def _extract_place_query(text: str) -> str:
         if w not in _STOPWORDS and len(w) >= 2:
             return w.capitalize()
     return text
-
-
-def _wmo_to_label(code: int | None) -> str:
-    if code is None:
-        return "conditions variables"
-    return WMO_WEATHER_LABELS.get(code, "conditions variables")
 
 
 def geocode(place: str) -> dict:
@@ -97,7 +88,7 @@ def geocode(place: str) -> dict:
 
 
 def get_weather(place: str | None = None, latitude: float | None = None, longitude: float | None = None) -> dict:
-    """Récupère la météo actuelle et les prévisions pour un lieu ou des coordonnées."""
+    """Récupère la météo actuelle et les prévisions via l'API FastAPI (/weather/fetch, /location)."""
     lat, lon, label = None, None, None
 
     if place:
@@ -111,42 +102,34 @@ def get_weather(place: str | None = None, latitude: float | None = None, longitu
     else:
         return {"error": "Indiquez un lieu (place) ou des coordonnées (latitude, longitude)"}
 
-    url = (
-        f"{OPEN_METEO_FORECAST}?"
-        f"latitude={lat}&longitude={lon}"
-        "&current=temperature_2m,weather_code"
-        "&hourly=temperature_2m&forecast_days=1"
-    )
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException as e:
-        return {"error": f"Erreur météo: {e}"}
+    fetch_res = _call_weather_api("/fetch", {"latitude": lat, "longitude": lon, "forecast_days": 1})
+    if "error" in fetch_res:
+        return fetch_res
 
-    current = data.get("current") or {}
-    temp = current.get("temperature_2m")
-    code = current.get("weather_code")
-    hourly = data.get("hourly") or {}
-    times = hourly.get("time") or []
-    temps = hourly.get("temperature_2m") or []
+    loc_res = _call_weather_api("/location", {"latitude": lat, "longitude": lon})
+    if "error" in loc_res:
+        return loc_res
 
+    summary = fetch_res.get("summary") or {}
+    weather_rows = loc_res.get("weather") or []
     forecast_hours = []
-    for i in range(min(6, len(times))):
-        if i < len(temps) and temps[i] is not None:
-            t_str = times[i][11:16] if len(times[i]) >= 16 else times[i]
-            forecast_hours.append({"time": t_str, "temp": temps[i]})
+    for row in weather_rows[:6]:
+        t = row.get("temperature_2m")
+        if t is not None:
+            time_str = row.get("time", "")
+            t_str = time_str[11:16] if len(time_str) >= 16 else time_str
+            forecast_hours.append({"time": t_str, "temp": t})
 
     return {
         "location": label,
-        "current_temp": temp,
-        "weather_label": _wmo_to_label(code),
+        "current_temp": summary.get("current_temp"),
+        "weather_label": summary.get("weather_label", "conditions variables"),
         "forecast_next_hours": forecast_hours,
     }
 
 
 def get_weather_trend(place: str, days: int = 7) -> dict:
-    """Récupère la tendance des températures sur N jours pour un lieu."""
+    """Récupère la tendance des températures sur N jours via l'API FastAPI (/weather/fetch, /location)."""
     if days < 1 or days > 16:
         days = 7
 
@@ -156,35 +139,25 @@ def get_weather_trend(place: str, days: int = 7) -> dict:
 
     lat, lon, label = geo["latitude"], geo["longitude"], geo["label"]
 
-    url = (
-        f"{OPEN_METEO_FORECAST}?"
-        f"latitude={lat}&longitude={lon}"
-        f"&hourly=temperature_2m&forecast_days={days}"
-    )
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException as e:
-        return {"error": f"Erreur météo: {e}"}
+    fetch_res = _call_weather_api("/fetch", {"latitude": lat, "longitude": lon, "forecast_days": days})
+    if "error" in fetch_res:
+        return fetch_res
 
-    hourly = data.get("hourly") or {}
-    times = hourly.get("time") or []
-    temps = hourly.get("temperature_2m") or []
+    loc_res = _call_weather_api("/location", {"latitude": lat, "longitude": lon})
+    if "error" in loc_res:
+        return loc_res
 
-    for i, time_str in enumerate(times):
-        temp = temps[i] if i < len(temps) else None
-        insert_weather(lat, lon, time_str, temp)
-
+    weather_rows = loc_res.get("weather") or []
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    end_date = (datetime.utcnow() + timedelta(days=days)).strftime("%Y-%m-%d")
     daily_data = {}
-    for i, time_str in enumerate(times):
-        if i >= len(temps):
-            break
+    for row in weather_rows:
+        time_str = row.get("time", "")
         date_part = time_str[:10] if len(time_str) >= 10 else time_str
-        if date_part not in daily_data:
-            daily_data[date_part] = []
-        if temps[i] is not None:
-            daily_data[date_part].append(temps[i])
+        if today <= date_part <= end_date:
+            t = row.get("temperature_2m")
+            if t is not None:
+                daily_data.setdefault(date_part, []).append(t)
 
     daily_summary = []
     for date_key in sorted(daily_data.keys()):
@@ -246,6 +219,32 @@ def get_my_alerts(chat_id: int) -> dict:
             "temp_min": alert.get("temp_min"),
             "temp_max": alert.get("temp_max"),
         }],
+    }
+
+
+def get_my_preferences(chat_id: int) -> dict:
+    """Récupère les préférences utilisateur (ville préférée, unités)."""
+    prefs = get_preferences(chat_id)
+    if not prefs:
+        return {"preferred_city": None, "units": "celsius", "message": "Aucune préférence configurée"}
+    return {
+        "preferred_city": prefs.get("preferred_city"),
+        "units": prefs.get("units", "celsius"),
+    }
+
+
+def set_my_preferences(
+    chat_id: int,
+    preferred_city: str | None = None,
+    units: str | None = None,
+) -> dict:
+    """Configure les préférences utilisateur (ville préférée, unités)."""
+    upsert_preferences(chat_id, preferred_city=preferred_city, units=units)
+    prefs = get_preferences(chat_id) or {}
+    return {
+        "success": True,
+        "preferred_city": prefs.get("preferred_city"),
+        "units": prefs.get("units", "celsius"),
     }
 
 
@@ -325,6 +324,36 @@ OPENAI_TOOLS_DEFINITION = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_preferences",
+            "description": "Récupère les préférences utilisateur (ville préférée, unités celsius/fahrenheit).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chat_id": {"type": "integer", "description": "ID du chat Telegram"},
+                },
+                "required": ["chat_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_my_preferences",
+            "description": "Configure les préférences utilisateur (ville préférée, unités).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chat_id": {"type": "integer", "description": "ID du chat Telegram"},
+                    "preferred_city": {"type": "string", "description": "Ville préférée par défaut"},
+                    "units": {"type": "string", "description": "Unités : celsius ou fahrenheit"},
+                },
+                "required": ["chat_id"],
+            },
+        },
+    },
 ]
 
 
@@ -359,6 +388,20 @@ def execute_tool(name: str, arguments: dict, chat_id: int | None = None) -> str:
                 result = {"error": "chat_id requis pour get_my_alerts (contexte Telegram)"}
             else:
                 result = get_my_alerts(chat_id=chat_id)
+        elif name == "get_my_preferences":
+            if chat_id is None:
+                result = {"error": "chat_id requis pour get_my_preferences (contexte Telegram)"}
+            else:
+                result = get_my_preferences(chat_id=chat_id)
+        elif name == "set_my_preferences":
+            if chat_id is None:
+                result = {"error": "chat_id requis pour set_my_preferences (contexte Telegram)"}
+            else:
+                result = set_my_preferences(
+                    chat_id=chat_id,
+                    preferred_city=arguments.get("preferred_city"),
+                    units=arguments.get("units"),
+                )
         else:
             result = {"error": f"Tool inconnu: {name}"}
     except Exception as e:

@@ -146,25 +146,19 @@ async def start(update: Update, context) -> None:
 
 
 async def meteo_command(update: Update, context) -> None:
-    """Handler /meteo [ville] — météo directe avec boutons."""
+    """Handler /meteo [ville] — passe par l'agent (conformité architecture Bot → Agent → API)."""
     args = context.args or []
     place = " ".join(args).strip()
     if not place:
         await update.message.reply_text("Écris la ville dont tu veux la météo.")
         return
     await update.effective_chat.send_chat_action(ChatAction.TYPING)
-    geo = await geocode_place(place)
-    if not geo:
-        await update.message.reply_text(f"❌ Lieu « {place} » introuvable.")
-        return
-    lat, lon, label = geo
     try:
-        weather = await fetch_weather_api(lat, lon)
-        msg = _format_weather_msg(weather, label)
-        await update.message.reply_text(msg, reply_markup=_weather_inline_keyboard())
+        answer = await ask_agent_api(f"Météo à {place}", chat_id=update.effective_chat.id)
+        await update.message.reply_text(f"🤖 {answer}", reply_markup=_weather_inline_keyboard())
     except requests.RequestException as e:
-        logger.exception("Erreur Open-Meteo")
-        await update.message.reply_text(f"❌ Erreur météo : {e}")
+        logger.warning("Erreur API agent: %s", e)
+        await update.message.reply_text(f"❌ Erreur : {e}. Vérifie que l'API tourne sur {API_BASE_URL}")
 
 
 async def help_command(update: Update, context) -> None:
@@ -251,22 +245,43 @@ def is_coordinates(text: str) -> tuple[float, float] | None:
     return None
 
 
-def _fetch_weather_sync(lat: float, lon: float) -> dict:
-    """Appelle Open-Meteo (synchrone, exécutée dans un thread)."""
-    url = (
-        "https://api.open-meteo.com/v1/forecast?"
-        f"latitude={lat}&longitude={lon}"
-        "&current=temperature_2m,weather_code"
-        "&hourly=temperature_2m&forecast_days=1"
+def _fetch_weather_via_api_sync(lat: float, lon: float) -> dict:
+    """Appelle l'API FastAPI /weather/fetch + /location (conformité architecture)."""
+    base = API_BASE_URL.rstrip("/")
+    headers = {"X-API-Key": API_KEY}
+    fetch_resp = requests.get(
+        f"{base}/weather/fetch",
+        params={"latitude": lat, "longitude": lon, "forecast_days": 1},
+        headers=headers,
+        timeout=15,
     )
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()
+    fetch_resp.raise_for_status()
+    fetch_data = fetch_resp.json()
+    summary = fetch_data.get("summary") or {}
+    loc_resp = requests.get(
+        f"{base}/weather/location",
+        params={"latitude": lat, "longitude": lon},
+        headers=headers,
+        timeout=10,
+    )
+    loc_resp.raise_for_status()
+    loc_data = loc_resp.json()
+    weather_rows = loc_data.get("weather") or []
+    return {
+        "current": {
+            "temperature_2m": summary.get("current_temp"),
+            "weather_label": summary.get("weather_label"),
+        },
+        "hourly": {
+            "time": [r.get("time") for r in weather_rows],
+            "temperature_2m": [r.get("temperature_2m") for r in weather_rows],
+        },
+    }
 
 
 async def fetch_weather_api(lat: float, lon: float) -> dict:
-    """Appelle Open-Meteo (non bloquant via thread pool)."""
-    return await asyncio.to_thread(_fetch_weather_sync, lat, lon)
+    """Appelle l'API FastAPI pour la météo (non bloquant)."""
+    return await asyncio.to_thread(_fetch_weather_via_api_sync, lat, lon)
 
 
 def _ask_agent_sync(question: str, chat_id: int | None = None) -> str:
@@ -303,8 +318,7 @@ def _format_weather_msg(weather: dict, location: str) -> str:
     """Formate la réponse météo avec température actuelle + prévisions prochaines heures."""
     current = weather.get("current") or {}
     temp = current.get("temperature_2m")
-    code = current.get("weather_code")
-    label = _wmo_to_label(code)
+    label = current.get("weather_label") or _wmo_to_label(current.get("weather_code"))
     temp_str = f"{temp}°C" if temp is not None else "—"
     lines = [f"🌡️ {location} : {temp_str}, {label}"]
     hourly = weather.get("hourly") or {}

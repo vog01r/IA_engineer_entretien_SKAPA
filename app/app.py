@@ -6,12 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.endpoints.weather import router as weather_router
 from app.api.v1.endpoints.agent import router as agent_router
-from app.config import ALLOWED_ORIGINS
+from app.config import ALLOWED_ORIGINS, API_KEY, AUTH_KEY
 
 load_dotenv()
-
-AUTH_KEY = os.getenv("AUTH_KEY", "")
-API_KEY = os.getenv("API_KEY", "")
 
 app = FastAPI(title="API Météo + MCP", version="0.1.0")
 

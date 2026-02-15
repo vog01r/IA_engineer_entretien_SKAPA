@@ -26,13 +26,15 @@ class Agent:
 - afficher la tendance des températures sur plusieurs jours
 - configurer des alertes personnalisées (seuils temp_min, temp_max)
 - lister les alertes de l'utilisateur
+- gérer les préférences (ville préférée, unités celsius/fahrenheit)
 
 RÈGLES :
 1. Utilise les outils pour répondre aux questions météo (ex: "Quel temps à Tokyo ?" → get_weather)
-2. Pour les tendances : "Montre-moi la tendance sur 7 jours à Lyon" → get_weather_trend
-3. Pour les alertes : "Préviens-moi si < 0°C à Paris" → set_alert avec temp_min=0
-4. Réponds en langage naturel, de façon concise et utile
-5. Si un lieu est introuvable, dis-le clairement
+2. Si l'utilisateur demande la météo sans préciser de lieu, utilise get_my_preferences pour sa ville préférée
+3. Pour les tendances : "Montre-moi la tendance sur 7 jours à Lyon" → get_weather_trend
+4. Pour les alertes : "Préviens-moi si < 0°C à Paris" → set_alert avec temp_min=0
+5. Réponds en langage naturel, de façon concise et utile
+6. Si un lieu est introuvable, dis-le clairement
 """
 
     def ask(self, question: str, chat_id: int | None = None) -> str:
