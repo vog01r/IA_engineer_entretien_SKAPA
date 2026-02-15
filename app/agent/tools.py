@@ -112,11 +112,18 @@ def get_weather(place: str | None = None, latitude: float | None = None, longitu
 
     summary = fetch_res.get("summary") or {}
     weather_rows = loc_res.get("weather") or []
+    # Garder uniquement les heures >= maintenant (évite 00:00-05:00 quand il est 19h)
+    now_utc = datetime.utcnow()
+    threshold = now_utc.strftime("%Y-%m-%dT%H")
     forecast_hours = []
-    for row in weather_rows[:6]:
+    for row in weather_rows:
+        if len(forecast_hours) >= 6:
+            break
+        time_str = row.get("time", "")
+        if time_str < threshold:
+            continue
         t = row.get("temperature_2m")
         if t is not None:
-            time_str = row.get("time", "")
             t_str = time_str[11:16] if len(time_str) >= 16 else time_str
             forecast_hours.append({"time": t_str, "temp": t})
 
