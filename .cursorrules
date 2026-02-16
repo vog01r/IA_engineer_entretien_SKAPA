@@ -52,3 +52,132 @@ Reference QCM questions when relevant:
 - Highlight trade-offs
 - Suggest alternatives
 - Ask for clarification if needed
+
+---
+
+# 🚨 SÉCURITÉ COMMITS - RÈGLES CRITIQUES (NON-NÉGOCIABLES)
+
+**VIOLATION = LICENCIEMENT - Ces règles DOIVENT être respectées à 100%**
+
+## ❌ JAMAIS COMMITER (Liste exhaustive)
+
+### Secrets et Clés
+- ❌ **API Keys** : OpenAI, Anthropic, toute clé externe
+- ❌ **JWT_SECRET** : Secret pour signer les tokens
+- ❌ **Passwords** : Même hashés si c'est un vrai password
+- ❌ **Database credentials** : user/password de BDD
+- ❌ **Tokens OAuth** : access_token, refresh_token
+- ❌ **Private keys** : SSH, SSL, certificats
+- ❌ **Webhooks secrets** : Tokens de webhooks
+- ❌ **Telegram Bot Token** : Token du bot
+- ❌ **Toute valeur générée par `openssl rand`**
+
+### Fichiers Sensibles
+- ❌ `.env` : TOUJOURS dans .gitignore
+- ❌ `.env.local`, `.env.production` : Variantes .env
+- ❌ `database.db` : Base avec vraies données
+- ❌ `NOTES.md` : Notes personnelles du développeur
+- ❌ Fichiers avec vraies données utilisateurs
+
+## ✅ AUTORISÉ À COMMITER
+
+### Placeholders Uniquement
+- ✅ `.env.example` : SEULEMENT avec placeholders (`your_api_key_here`, `sk-...`)
+- ✅ Configuration : Sans valeurs réelles
+- ✅ Code source : Sans secrets hardcodés
+- ✅ Documentation : Sans secrets
+
+## 📝 MESSAGES DE COMMIT - RÈGLES ABSOLUES
+
+### ❌ JAMAIS INCLURE DANS LE MESSAGE
+
+**Exemple INTERDIT :**
+```
+fix: rotation API_KEY
+Ancienne clé : abc123def456
+Nouvelle clé : xyz789ghi012  ← JAMAIS ÇA !
+```
+
+### ✅ BON EXEMPLE
+
+```
+fix(security): rotation API_KEY
+- Ancienne clé invalidée (exposée dans bundle)
+- Nouvelle clé générée (256 bits, openssl rand -hex 32)
+- Clé stockée dans .env (ignoré par git)
+- Variables Railway à mettre à jour manuellement
+```
+
+## 🔍 CHECKLIST AVANT CHAQUE COMMIT (OBLIGATOIRE)
+
+**À VÉRIFIER SYSTÉMATIQUEMENT :**
+
+1. ✅ `git diff --cached` : Pas de secrets dans les fichiers stagés
+2. ✅ Message de commit : Pas de clés/tokens/passwords
+3. ✅ `.env` dans `.gitignore` : Vérifié
+4. ✅ Seulement `.env.example` avec placeholders
+5. ✅ Pas de vraies données utilisateurs
+6. ✅ Pas de `NOTES.md` ou fichiers personnels
+
+## 🚨 SI ERREUR COMMISE (Procédure d'urgence)
+
+### Commit pas encore pushé
+```bash
+# Amend le dernier commit
+git commit --amend
+
+# Ou reset si plusieurs commits
+git reset HEAD~1
+```
+
+### Commit déjà pushé
+```bash
+# 1. Révoquer IMMÉDIATEMENT le secret exposé
+# 2. Régénérer une nouvelle clé
+# 3. Revert le commit
+git revert <commit-hash>
+# 4. Force push (si autorisé)
+git push --force
+```
+
+## 📋 EXEMPLES CONCRETS
+
+### ❌ MAUVAIS : Secret dans le code
+```python
+# ❌ NE JAMAIS FAIRE ÇA
+API_KEY = "sk-proj-abc123def456..."
+JWT_SECRET = "mon-secret-123"
+```
+
+### ✅ BON : Secret depuis env
+```python
+# ✅ TOUJOURS FAIRE ÇA
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY must be set")
+```
+
+### ❌ MAUVAIS : Secret dans commit message
+```
+fix: update API key
+
+New key: abc123def456...xyz789  ← JAMAIS mettre une vraie clé !
+```
+
+### ✅ BON : Référence générique
+```
+fix(security): rotation API_KEY
+
+- Ancienne clé invalidée (exposée)
+- Nouvelle clé générée (256 bits)
+- Mise à jour .env local (non commité)
+- Variables Railway à configurer manuellement
+```
+
+## 🎯 RÈGLE D'OR
+
+**"Si tu hésites, ne commit pas. Demande confirmation au développeur."**
+
+---
+
+**RAPPEL FINAL : Violation de ces règles = Faille de sécurité critique = Licenciement immédiat**
