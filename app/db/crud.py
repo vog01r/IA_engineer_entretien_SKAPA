@@ -66,6 +66,17 @@ def create_tables():
             )"""
         )
 
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                hashed_password TEXT NOT NULL,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )"""
+        )
+
         conn.commit()
 
 
@@ -273,5 +284,98 @@ def upsert_preferences(chat_id: int, preferred_city: str | None = None, units: s
                  updated_at = datetime('now')
             """,
             (chat_id, pc, u),
+        )
+        conn.commit()
+
+
+# ──────────────── Users (Web Auth) ────────────────
+
+
+def create_user(email: str, hashed_password: str) -> int:
+    """Crée un utilisateur et retourne son ID.
+    
+    Args:
+        email: Email unique de l'utilisateur
+        hashed_password: Password hashé avec bcrypt (via passlib)
+    
+    Returns:
+        ID du user créé
+    
+    Raises:
+        sqlite3.IntegrityError: Si l'email existe déjà
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO users (email, hashed_password) VALUES (?, ?)",
+            (email.lower().strip(), hashed_password),
+        )
+        conn.commit()
+        return c.lastrowid
+
+
+def get_user_by_email(email: str) -> dict | None:
+    """Récupère un utilisateur par son email.
+    
+    Args:
+        email: Email de l'utilisateur (case-insensitive)
+    
+    Returns:
+        Dict avec id, email, hashed_password, is_active, created_at, updated_at
+        ou None si non trouvé
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),))
+        r = c.fetchone()
+        return dict(r) if r else None
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    """Récupère un utilisateur par son ID.
+    
+    Args:
+        user_id: ID de l'utilisateur
+    
+    Returns:
+        Dict avec id, email, hashed_password, is_active, created_at, updated_at
+        ou None si non trouvé
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        r = c.fetchone()
+        return dict(r) if r else None
+
+
+def update_user_password(user_id: int, new_hashed_password: str):
+    """Met à jour le password d'un utilisateur.
+    
+    Args:
+        user_id: ID de l'utilisateur
+        new_hashed_password: Nouveau password hashé avec bcrypt
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            "UPDATE users SET hashed_password = ?, updated_at = datetime('now') WHERE id = ?",
+            (new_hashed_password, user_id),
+        )
+        conn.commit()
+
+
+def deactivate_user(user_id: int):
+    """Désactive un utilisateur (soft delete).
+    
+    Args:
+        user_id: ID de l'utilisateur
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            "UPDATE users SET is_active = 0, updated_at = datetime('now') WHERE id = ?",
+            (user_id,),
         )
         conn.commit()
