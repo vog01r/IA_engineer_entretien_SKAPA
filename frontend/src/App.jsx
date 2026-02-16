@@ -1,11 +1,14 @@
 import { useState } from "react";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import WeatherDashboard from "./components/WeatherDashboard";
 import LocationSearch from "./components/LocationSearch";
 import ChatInterface from "./components/ChatInterface";
 import "./App.css";
 
-function App() {
+function AppContent() {
   const [dashboardRefresh, setDashboardRefresh] = useState(0);
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -17,6 +20,20 @@ function App() {
           <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
             Météo & agent conversationnel
           </p>
+          {user && (
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <p className="text-sm" style={{ color: "var(--color-muted)" }}>
+                Connecté : <span style={{ color: "var(--color-text)" }}>{user.email}</span>
+              </p>
+              <button
+                onClick={logout}
+                className="text-sm px-3 py-1 rounded-lg"
+                style={{ background: "var(--color-border)", color: "var(--color-text)" }}
+              >
+                Déconnexion
+              </button>
+            </div>
+          )}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -34,6 +51,16 @@ function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <ProtectedRoute>
+        <AppContent />
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }
 

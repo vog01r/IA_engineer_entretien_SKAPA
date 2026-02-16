@@ -1,14 +1,17 @@
 /**
  * Service API pour le frontend SKAPA
- * Utilise VITE_API_URL et VITE_API_KEY (variables d'environnement)
+ * Utilise httpOnly cookies pour authentification JWT
  */
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const API_KEY = import.meta.env.VITE_API_KEY || "";
 
 const headers = {
   "Content-Type": "application/json",
-  "X-API-Key": API_KEY,
+};
+
+// Options fetch avec credentials pour httpOnly cookies
+const fetchOptions = {
+  credentials: "include", // Envoie cookies cross-origin
 };
 
 async function handleResponse(response) {
@@ -21,13 +24,13 @@ async function handleResponse(response) {
 
 export const weatherAPI = {
   async getAll() {
-    const data = await fetch(`${BASE_URL}/weather/`, { headers }).then(handleResponse);
+    const data = await fetch(`${BASE_URL}/weather/`, { headers, ...fetchOptions }).then(handleResponse);
     return data.weather;
   },
 
   async fetchWeather(latitude, longitude) {
     const params = new URLSearchParams({ latitude, longitude });
-    const data = await fetch(`${BASE_URL}/weather/fetch?${params}`, { headers }).then(
+    const data = await fetch(`${BASE_URL}/weather/fetch?${params}`, { headers, ...fetchOptions }).then(
       handleResponse
     );
     return data;
@@ -37,6 +40,7 @@ export const weatherAPI = {
     const params = new URLSearchParams({ latitude, longitude });
     const data = await fetch(`${BASE_URL}/weather/location?${params}`, {
       headers,
+      ...fetchOptions,
     }).then(handleResponse);
     return data.weather;
   },
@@ -47,6 +51,7 @@ export const agentAPI = {
     const data = await fetch(`${BASE_URL}/agent/ask`, {
       method: "POST",
       headers,
+      ...fetchOptions,
       body: JSON.stringify({ question }),
     }).then(handleResponse);
     return data;
