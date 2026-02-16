@@ -5,9 +5,11 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.endpoints.agent import router as agent_router
+from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.mcp_info import router as mcp_info_router
 from app.api.v1.endpoints.weather import router as weather_router
 from app.config import ALLOWED_ORIGINS, API_KEY, AUTH_KEY
+from app.core.dependencies import get_current_user
 
 load_dotenv()
 
@@ -41,14 +43,14 @@ app.include_router(
     weather_router,
     tags=["Météo"],
     prefix="/weather",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(get_current_user)],
 )
 
 app.include_router(
     agent_router,
     tags=["Agent"],
     prefix="/agent",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(get_current_user)],
 )
 
 app.include_router(
@@ -57,7 +59,13 @@ app.include_router(
     tags=["MCP"],
 )
 
+app.include_router(
+    auth_router,
+    prefix="/auth",
+    tags=["Authentication"],
+)
+
 
 @app.get("/", tags=["Root"])
 async def read_root():
-    return {"message": "API Météo", "docs": "/docs", "weather": "/weather"}
+    return {"message": "API Météo", "docs": "/docs", "weather": "/weather", "auth": "/auth/login"}
