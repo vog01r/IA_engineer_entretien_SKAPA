@@ -14,10 +14,8 @@ COPY . .
 
 # Build arguments pour variables d'env (injectées à build time par Railway)
 ARG VITE_API_URL
-ARG VITE_API_KEY
 
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_API_KEY=$VITE_API_KEY
 
 # Build
 RUN npm run build
