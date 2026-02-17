@@ -1,11 +1,12 @@
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.shared.agent import Agent
+from backend.web.auth.dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 # Initialiser l'agent (clé depuis .env)
 agent = Agent(

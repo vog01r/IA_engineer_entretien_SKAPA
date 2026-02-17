@@ -8,11 +8,12 @@ from backend.shared.db.crud import (
     get_weather_by_location,
     insert_weather,
 )
+from backend.web.auth.dependencies import get_current_user
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 _BASE = OPEN_METEO_URL
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 # Mapping WMO weather code → libellé français
 WMO_WEATHER_LABELS = {
