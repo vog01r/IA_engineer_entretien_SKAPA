@@ -123,7 +123,7 @@ Tout via **Pull Request vers `main`**. Voir `INSTRUCTIONS_QCM.md` pour les déta
 | QCM | `INSTRUCTIONS_QCM.md` complété (5 parties, 35+ questions) |
 | Corrections backend | Bugs et failles de sécurité identifiés et corrigés (commits séparés) |
 | Frontend | Interface web fonctionnelle (météo, chat agent, données) |
-| Serveur MCP | 3+ tools dans `app/mcp/server.py`, connectable Claude Desktop |
+| Serveur MCP | 3+ tools dans `backend/services/mcp/server.py`, connectable Claude Desktop — voir `docs/MCP_SETUP.md` |
 | Bot Telegram | Agent conversationnel météo dans `app/bot/` |
 | Exercice 3.3 | Une variante au choix (A, B ou C) |
 | Exercice 3.8 | Script d'analyse `question_3_8.py` |

@@ -6,7 +6,7 @@
 
 ## ⚠️ Prérequis
 
-1. **Venv activé** : `source .venv/bin/activate`
+1. **Venv activé** : `source .venv/bin/activate` (les commandes ci-dessous supposent le venv activé)
 2. **Dépendances installées** : `pip install -r requirements.txt`
 3. **Variables d'environnement** : Fichier `.env` configuré
 4. **Python 3** : Utiliser `python3` (pas `python` sur macOS)
@@ -29,29 +29,23 @@ pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org \
 
 ## 🧪 Tests sans backend (tests unitaires)
 
-### Test 1 : Conformité MCP
+### Test 1 : Conformité MCP (format)
 
 ```bash
-# Activer venv
 source .venv/bin/activate
-
-# Lancer test MCP (pas besoin de backend)
 python3 scripts/test_mcp_compliance.py
 ```
 
-**Résultat attendu :**
-```
-✅ TOUS LES TESTS PASSÉS
-📊 RÉSUMÉ:
-  ✅ JSON-RPC 2.0 format
-  ✅ Capabilities declaration
-  ✅ Tools list/call endpoints
-  ✅ Input schemas (Pydantic)
-  ✅ Error handling
-  ✅ Annotations (audience, priority)
+**Résultat attendu :** `✅ TOUS LES TESTS PASSÉS` et `💡 CONFORMITÉ MCP: 100%`
 
-💡 CONFORMITÉ MCP: 100%
+### Test 1b : E2E MCP (serveur HTTP réel)
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=. python3 scripts/test_mcp_e2e.py
 ```
+
+**Résultat attendu :** `Tous les tests E2E MCP sont passés.` (initialize → tools/list → tools/call)
 
 ---
 
@@ -201,72 +195,18 @@ INFO - ⏱️ [TOTAL_RESPONSE] took 2.126s    ← Gain -50% !
 
 ## 🔌 Tester le MCP Server
 
-### Mode 1 : stdio (Claude Desktop)
+**Configuration complète (Claude Desktop stdio, HTTP, ChatGPT) :** voir **[\`docs/MCP_SETUP.md\`](docs/MCP_SETUP.md)**.
 
-**Configuration Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`) :
-
-```json
-{
-  "mcpServers": {
-    "skapa": {
-      "command": "python3",
-      "args": [
-        "-m",
-        "backend.services.mcp.server"
-      ],
-      "cwd": "/Users/chabanis/Documents/code dev/SKAPA/IA_engineer_entretien_SKAPA",
-      "env": {
-        "PYTHONPATH": "/Users/chabanis/Documents/code dev/SKAPA/IA_engineer_entretien_SKAPA"
-      }
-    }
-  }
-}
-```
-
-**Tester :**
-1. Redémarrer Claude Desktop
-2. Ouvrir une conversation
-3. Les tools SKAPA devraient apparaître
-4. Tester : "Quelle est la météo à Paris ?" (utilise `get_weather`)
-
-### Mode 2 : HTTP (local)
-
-**Terminal 4 :**
+**Tests rapides (venv activé) :**
 ```bash
-# Activer venv
-source .venv/bin/activate
+# Conformité format
+python3 scripts/test_mcp_compliance.py
 
-# Lancer MCP en HTTP
-python3 backend/services/mcp/run_http.py
+# E2E HTTP (initialize → tools/list → tools/call)
+PYTHONPATH=. python3 scripts/test_mcp_e2e.py
 ```
 
-**Tester :**
-```bash
-# Lister les tools
-curl -X POST http://localhost:8001/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/list"
-  }'
-
-# Appeler get_weather
-curl -X POST http://localhost:8001/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/call",
-    "params": {
-      "name": "get_weather",
-      "arguments": {
-        "latitude": 48.8566,
-        "longitude": 2.3522
-      }
-    }
-  }'
-```
+**Lancer le serveur MCP en HTTP :** `python3 backend/services/mcp/run_http.py` (port 8001). Détail et flux session : `docs/MCP_SETUP.md`.
 
 ---
 
@@ -326,9 +266,8 @@ python3 -m uvicorn backend.main:app --reload --port 8000
 ### ✅ MCP
 
 - [ ] Test conformité passé (`python3 scripts/test_mcp_compliance.py`)
-- [ ] MCP HTTP lancé (`python3 backend/services/mcp/run_http.py`)
-- [ ] Tools listés (`curl -X POST http://localhost:8001/mcp ...`)
-- [ ] Claude Desktop configuré (optionnel)
+- [ ] Test E2E passé (`PYTHONPATH=. python3 scripts/test_mcp_e2e.py`)
+- [ ] Config Claude Desktop / HTTP : voir `docs/MCP_SETUP.md`
 
 ### ✅ Bot Telegram
 
@@ -348,8 +287,8 @@ python3 -m uvicorn backend.main:app --reload --port 8000
 3. **Montrer cache vide** : `curl http://localhost:8000/cache/stats` → 0 hits
 4. **Lancer test performance** : Terminal 2 → Observer timings
 5. **Montrer cache rempli** : `curl http://localhost:8000/cache/stats` → hit_rate > 60%
-6. **Lancer test MCP** : `python3 scripts/test_mcp_compliance.py` → 100% conforme
-7. **Montrer documentation** : Ouvrir `docs/ARCHITECTURE.md`, `docs/PERFORMANCE_ANALYSIS.md`
+6. **Lancer test MCP** : `python3 scripts/test_mcp_compliance.py` puis `PYTHONPATH=. python3 scripts/test_mcp_e2e.py` — détail : `docs/MCP_SETUP.md`
+7. **Montrer documentation** : Ouvrir `docs/ARCHITECTURE.md`
 
 **Phrase clé :** "J'ai mesuré avant d'optimiser. Le bottleneck principal est le LLM (70-90% du temps). Le cache réduit le temps de réponse de 40-50% sur les requêtes répétées."
 

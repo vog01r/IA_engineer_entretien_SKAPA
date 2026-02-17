@@ -70,7 +70,6 @@ IA_engineer_entretien_SKAPA/
 │
 ├── docs/                       # Documentation
 │   ├── ARCHITECTURE.md         # Ce fichier
-│   ├── PERFORMANCE_ANALYSIS.md # Analyse performance
 │   └── MCP_SETUP.md            # Configuration MCP
 │
 ├── scripts/                    # Scripts utilitaires
@@ -142,19 +141,9 @@ IA_engineer_entretien_SKAPA/
 
 ### 3. MCP Server (`backend/services/mcp/`)
 
-**Rôle :** Exposer tools météo + knowledge base à Claude Desktop/ChatGPT.
+**Rôle :** Exposer tools météo + knowledge base à Claude Desktop/ChatGPT (4 tools : get_weather, search_knowledge, conversation_history, get_weather_stats).
 
-**Tools :**
-1. `get_weather` : Prévisions météo GPS
-2. `search_knowledge` : Recherche base connaissances
-3. `conversation_history` : Historique conversations
-4. `get_weather_stats` : Statistiques météo
-
-**Transports :**
-- **stdio** : Claude Desktop (local)
-- **streamable-http** : Déploiement cloud (Railway)
-
-**Conformité :** MCP Protocol (JSON-RPC 2.0, capabilities, schemas, annotations)
+**Transports :** stdio (Claude Desktop) · streamable-http (Railway). **Config, tests et conformité :** voir **[\`docs/MCP_SETUP.md\`](MCP_SETUP.md)**.
 
 ---
 
@@ -190,8 +179,9 @@ User → Bot → Agent API → LLM (OpenAI/Claude)
 
 **Fichiers :**
 - `ARCHITECTURE.md` : Ce fichier (vue d'ensemble)
-- `PERFORMANCE_ANALYSIS.md` : Analyse bottlenecks + optimisations
 - `MCP_SETUP.md` : Configuration MCP (Claude Desktop, HTTP, ChatGPT)
+
+**Performance bot :** cache TTL dans `backend/shared/cache.py`, instrumentation dans le bot et l’agent ; script `scripts/test_bot_performance.py`.
 
 ---
 
@@ -222,6 +212,8 @@ User → Bot → Agent API → LLM (OpenAI/Claude)
 | Frontend | JWT (httpOnly cookies) | Utilisateurs web |
 | Bot Telegram | API Key (header) | Service externe |
 | MCP Server | API Key (header) | Service externe |
+
+Détails implémentation JWT (cookies, refresh, scopes) : voir **NOTES.md** section 28 (Authentification JWT) et code `backend/web/auth/`.
 
 ### Secrets
 
@@ -323,7 +315,7 @@ npm run dev  # Port 5173
 python -m app.bot.telegram_bot
 
 # MCP Server (stdio)
-python -m app.mcp.server
+python3 -m backend.services.mcp.server
 ```
 
 ### Railway (production)
@@ -375,31 +367,7 @@ python -m app.mcp.server
 
 ## 🧪 Tests
 
-### Scripts disponibles
-
-```bash
-# Performance bot
-python scripts/test_bot_performance.py
-
-# Conformité MCP
-python scripts/test_mcp_compliance.py
-
-# Ingestion knowledge base
-python scripts/ingest_knowledge.py
-```
-
-### Tests manuels
-
-```bash
-# Backend API
-curl http://localhost:8000/
-
-# Cache stats
-curl http://localhost:8000/cache/stats
-
-# Weather API
-curl "http://localhost:8000/weather/fetch?latitude=48.85&longitude=2.35"
-```
+**Scripts :** `scripts/test_bot_performance.py`, `scripts/test_mcp_compliance.py`, `scripts/test_mcp_e2e.py`, `scripts/ingest_knowledge.py`. **Commandes détaillées :** voir [QUICKSTART.md](../QUICKSTART.md) et [MCP_SETUP.md](MCP_SETUP.md).
 
 ---
 
