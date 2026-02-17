@@ -405,7 +405,6 @@ python3 -m backend.services.mcp.server
 - [ ] Tests unitaires (pytest)
 - [ ] CI/CD (GitHub Actions)
 - [ ] Monitoring (Sentry, Datadog)
-- [ ] Rate limiting (slowapi)
 
 ### Moyen terme (1-2 mois)
 - [ ] PostgreSQL (remplacer SQLite)

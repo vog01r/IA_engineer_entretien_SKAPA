@@ -104,13 +104,17 @@ scripts/          # Scripts utilitaires (tests, ingestion)
 infra/            # Infrastructure & déploiement
 ```
 
-**Documentation complète :** Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+**Décisions techniques :** Voir [`DECISIONS.md`](DECISIONS.md) — justifications de chaque choix (auth, cache, MCP, structure, rate limiting).
 
-**Améliorations implémentées :**
-- ✅ Cache intelligent (géocodage 24h, météo 10min)
-- ✅ Timing instrumentation (identification bottlenecks)
-- ✅ MCP conforme protocole standard (annotations, schemas)
-- ✅ Séparation claire des responsabilités
+**Documentation :** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/AUTH.md`](docs/AUTH.md) · [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md)
+
+**Corrections et implémentations :**
+- ✅ Sécurité : JWT httpOnly cookies, suppression clé frontend, timing attack fix
+- ✅ Auth duale : JWT (web) + API Key (bot/MCP) — routes protégées
+- ✅ Rate limiting : slowapi sur /auth et /agent
+- ✅ Cache intelligent : géocodage 24h, météo 10min
+- ✅ MCP conforme protocole standard (stdio + streamable-http)
+- ✅ Structure claire : web/ services/ shared/ infra/
 
 ---
 

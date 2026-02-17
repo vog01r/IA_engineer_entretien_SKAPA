@@ -14,15 +14,14 @@
 ### Installation initiale (une seule fois)
 
 ```bash
-cd "/Users/chabanis/Documents/code dev/SKAPA/IA_engineer_entretien_SKAPA"
+cd skapa-test-technique
 source .venv/bin/activate
 
 # Installer toutes les dépendances
-pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+pip install -r requirements.txt
 
-# Si erreur SSL, installer manuellement :
-pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org \
-  'passlib[bcrypt]' python-multipart slowapi email-validator
+# Si erreur SSL (macOS) :
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
 ```
 
 ---
@@ -247,7 +246,7 @@ python3 scripts/test_bot_performance.py
 **Solution :** Lancer depuis la racine du projet.
 
 ```bash
-cd "/Users/chabanis/Documents/code dev/SKAPA/IA_engineer_entretien_SKAPA"
+cd skapa-test-technique
 python3 -m uvicorn backend.main:app --reload --port 8000
 ```
 
