@@ -7,7 +7,7 @@ from pathlib import Path
 # Ajouter la racine au path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.db.crud import create_tables, insert_chunk
+from backend.shared.db.crud import create_tables, insert_chunk
 
 # data/ = documents et contenus (séparé du code)
 KNOWLEDGE_DIR = Path(__file__).resolve().parent.parent / "data" / "knowledge_base"

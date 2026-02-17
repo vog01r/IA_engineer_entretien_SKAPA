@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from requests.exceptions import RequestException
 from mcp.server.fastmcp import FastMCP
 
-from app.db.crud import get_all_weather, get_conversations, search_chunks
+from backend.shared.db.crud import get_all_weather, get_conversations, search_chunks
 
 
 class WeatherForecastItem(BaseModel):

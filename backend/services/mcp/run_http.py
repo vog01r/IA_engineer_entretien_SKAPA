@@ -9,7 +9,7 @@ Transport : streamable-http (réseau, cloud, conteneurs)
 """
 import os
 
-from app.mcp.server import mcp
+from backend.services.mcp.server import mcp
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8001))

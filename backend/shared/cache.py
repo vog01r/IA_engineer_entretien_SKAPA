@@ -7,7 +7,7 @@ Architecture :
 - Métriques de hit/miss pour monitoring
 
 Usage :
-    from app.shared.cache import cache_with_ttl
+    from backend.shared.cache import cache_with_ttl
 
     @cache_with_ttl(ttl_seconds=600)  # 10 minutes
     def fetch_weather(lat: float, lon: float):

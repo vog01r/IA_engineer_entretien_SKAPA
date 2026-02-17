@@ -15,8 +15,8 @@ from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Upd
 from telegram.constants import ChatAction
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
-from app.db.crud import create_tables, delete_alert, get_alert, get_all_alerts, upsert_alert
-from app.shared.cache import cache_with_ttl
+from backend.shared.db.crud import create_tables, delete_alert, get_alert, get_all_alerts, upsert_alert
+from backend.shared.cache import cache_with_ttl
 
 load_dotenv()
 
