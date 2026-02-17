@@ -24,8 +24,10 @@ Sécurité :
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from backend.shared.config import COOKIE_DOMAIN, COOKIE_NAME, COOKIE_SAMESITE, COOKIE_SECURE
 from backend.web.auth.dependencies import get_current_user
@@ -39,6 +41,10 @@ from backend.web.auth.security import (
 from backend.shared.db import create_user, get_user_by_email, get_user_by_id
 
 router = APIRouter()
+
+# Limiter local pour les endpoints auth (brute-force protection).
+# L'instance principale est dans main.py ; ici on réutilise la même key_func.
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ──────────────── Pydantic Models ────────────────
@@ -86,7 +92,8 @@ class AuthResponse(BaseModel):
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(request: RegisterRequest, response: Response):
+@limiter.limit("10/minute")
+async def register(http_request: Request, request: RegisterRequest, response: Response):
     """Crée un nouveau compte utilisateur.
     
     Args:
@@ -181,7 +188,8 @@ async def register(request: RegisterRequest, response: Response):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, response: Response):
+@limiter.limit("10/minute")
+async def login(http_request: Request, request: LoginRequest, response: Response):
     """Authentifie un utilisateur et retourne des tokens JWT.
     
     Args:

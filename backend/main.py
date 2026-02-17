@@ -10,13 +10,18 @@ Justifications :
 - Séparation claire front/back/services
 - Dual auth : JWT (web) + API Key (services)
 - CORS configuré pour frontend
+- Rate limiting (slowapi) : protection brute-force sur /auth et coût LLM sur /agent
 """
 
 import os
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from backend.web.auth.endpoints import router as auth_router
 from backend.web.weather.endpoints import router as weather_router
@@ -27,11 +32,20 @@ from backend.shared.cache import get_cache_stats, clear_cache
 
 load_dotenv()
 
+# Rate limiter basé sur l'IP du client.
+# Justification get_remote_address : simple, sans infra supplémentaire.
+# En prod derrière un reverse proxy, configurer X-Forwarded-For.
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="SKAPA Backend API",
     version="1.0.0",
     description="Backend modulaire : Web (JWT) + Services (API Key)",
 )
+
+# Enregistrer le limiter et son handler d'erreur (retourne HTTP 429)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Middleware
 app.add_middleware(
