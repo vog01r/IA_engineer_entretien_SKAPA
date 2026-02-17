@@ -1,6 +1,6 @@
 # 🔌 MCP Server - Configuration & Usage
 
-**Serveur MCP SKAPA** : Expose 4 tools météo + base de connaissances compatibles Claude Desktop et ChatGPT.
+**Serveur MCP SKAPA** : Expose 4 tools météo + base de connaissances, **conforme outil MCP standard** (ChatGPT / Claude Desktop / clients HTTP). Implémentation compatible transport stdio et streamable-http (JSON-RPC 2.0, session, `tools/list`, `tools/call`).
 
 ---
 
@@ -25,14 +25,11 @@
 {
   "mcpServers": {
     "skapa": {
-      "command": "python",
-      "args": [
-        "-m",
-        "app.mcp.server"
-      ],
-      "cwd": "/path/to/IA_engineer_entretien_SKAPA",
+      "command": "python3",
+      "args": ["-m", "backend.services.mcp.server"],
+      "cwd": "/chemin/vers/IA_engineer_entretien_SKAPA",
       "env": {
-        "PYTHONPATH": "/path/to/IA_engineer_entretien_SKAPA"
+        "PYTHONPATH": "/chemin/vers/IA_engineer_entretien_SKAPA"
       }
     }
   }
@@ -63,33 +60,27 @@
 }
 ```
 
-**Test manuel (curl) :**
+**Test manuel (curl) — flux MCP standard :**
+
+En HTTP streamable, le client doit d’abord envoyer `initialize`, puis réutiliser l’en-tête `mcp-session-id` pour les requêtes suivantes. Le serveur accepte `Accept: application/json` (réponses JSON uniquement, pas SSE).
 
 ```bash
-# Lister les tools
-curl -X POST https://skapa-mcp.railway.app/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/list"
-  }'
+# 1) Initialize (obligatoire) — récupérer mcp-session-id dans les en-têtes de réponse
+curl -i -X POST https://skapa-mcp.railway.app/mcp \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
 
-# Appeler get_weather
+# 2) tools/list (avec l’en-tête Mcp-Session-Id reçu en 1)
 curl -X POST https://skapa-mcp.railway.app/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/call",
-    "params": {
-      "name": "get_weather",
-      "arguments": {
-        "latitude": 48.8566,
-        "longitude": 2.3522
-      }
-    }
-  }'
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Mcp-Session-Id: <SESSION_ID_REÇU>" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# 3) tools/call (même session)
+curl -X POST https://skapa-mcp.railway.app/mcp \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Mcp-Session-Id: <SESSION_ID_REÇU>" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_weather","arguments":{"latitude":48.8566,"longitude":2.3522}}}'
 ```
 
 ---
@@ -152,30 +143,30 @@ paths:
 
 ## 🧪 Tests
 
-### Test local (stdio)
+### Test E2E MCP (HTTP, recommandé)
+
+Le script lance le serveur HTTP, envoie `initialize` → `tools/list` → `tools/call` et vérifie les réponses (conformité MCP standard).
 
 ```bash
-# Activer venv
 source .venv/bin/activate
-
-# Lancer serveur MCP
-python -m app.mcp.server
-
-# Dans un autre terminal : tester avec MCP Inspector
-npx @modelcontextprotocol/inspector python -m app.mcp.server
+PYTHONPATH=. python3 scripts/test_mcp_e2e.py
 ```
 
-### Test HTTP (déploiement)
+**Résultat attendu :** `Tous les tests E2E MCP sont passés.`
+
+### Test local stdio (Claude Desktop)
 
 ```bash
-# Lancer serveur HTTP local
-python backend/services/mcp/run_http.py
+source .venv/bin/activate
+python3 -m backend.services.mcp.server
 
-# Tester
-curl -X POST http://localhost:8001/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+# Autre terminal : MCP Inspector
+npx @modelcontextprotocol/inspector python3 -m backend.services.mcp.server
 ```
+
+### Test HTTP manuel
+
+Lancer `python3 backend/services/mcp/run_http.py` (serveur sur `http://127.0.0.1:8001/mcp`). Puis suivre le flux **Mode 2** ci-dessus (initialize → Mcp-Session-Id → tools/list, tools/call).
 
 ---
 
@@ -192,12 +183,12 @@ curl -X POST http://localhost:8001/mcp \
 - [x] **Tools list** : ✅ Endpoint `tools/list`
 - [x] **Tools call** : ✅ Endpoint `tools/call`
 
-### Points d'amélioration
+### Conformité « tool MCP standard »
 
-1. **Output schemas explicites** : Ajouter `outputSchema` pour validation stricte
-2. **Annotations** : Ajouter metadata (audience, priority)
-3. **Documentation** : Enrichir descriptions tools
-4. **Tests automatisés** : Script de validation conformité
+- **JSON-RPC 2.0** : Requêtes/réponses conformes.
+- **Session HTTP** : `initialize` puis `Mcp-Session-Id` pour `tools/list` et `tools/call`.
+- **Réponses JSON** : `json_response=True` — le client n’a besoin que de `Accept: application/json` (compatible ChatGPT / Claude HTTP / curl).
+- **Tests E2E** : `scripts/test_mcp_e2e.py` valide le flux complet.
 
 ---
 
@@ -207,10 +198,10 @@ curl -X POST http://localhost:8001/mcp \
 
 ```bash
 # Logs stdio (stderr)
-python -m app.mcp.server 2>&1 | tee mcp.log
+python3 -m backend.services.mcp.server 2>&1 | tee mcp.log
 
 # Logs HTTP (stdout)
-python backend/services/mcp/run_http.py
+python3 backend/services/mcp/run_http.py
 ```
 
 ### Métriques
@@ -284,4 +275,4 @@ Vérifier que le tool est bien décoré avec `@mcp.tool()` dans `server.py`.
 
 ---
 
-**Prochaine étape :** Ajouter output schemas explicites + tests automatisés
+**Tests automatisés :** `scripts/test_mcp_compliance.py` (format) et `scripts/test_mcp_e2e.py` (E2E HTTP).

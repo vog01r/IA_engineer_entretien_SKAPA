@@ -7,11 +7,12 @@ Expose 4 tools connectables depuis Claude Desktop ou un client MCP :
 - conversation_history : historique des conversations agent
 - get_weather_stats : statistiques sur les données météo en base
 
-Transport : stdio (Claude Desktop)
-Référence : https://modelcontextprotocol.io/docs
+Transport : stdio (Claude Desktop) ou streamable-http (déploiement).
+Référence : https://modelcontextprotocol.io/specification/latest
 SDK : https://github.com/modelcontextprotocol/python-sdk
 """
 
+import os
 import requests
 from pydantic import BaseModel, Field
 from requests.exceptions import RequestException
@@ -80,9 +81,17 @@ def _fetch_weather_from_api(latitude: float, longitude: float) -> dict:
     return r.json()
 
 
+# Port/host pour transport streamable-http (ignorés en stdio). 8001 pour éviter conflit avec API (8000).
+_mcp_port = int(os.getenv("PORT", "8001"))
+_mcp_host = os.getenv("HOST", "0.0.0.0")
+
+# json_response=True : réponses JSON uniquement (pas SSE), conforme clients externes (ChatGPT, Claude HTTP, curl).
 mcp = FastMCP(
     "SKAPA",
     instructions="Serveur MCP pour l'application SKAPA : météo, base de connaissances, historique des conversations et statistiques météo en base.",
+    host=_mcp_host,
+    port=_mcp_port,
+    json_response=True,
 )
 
 
@@ -239,5 +248,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # Lancer avec : python -m app.mcp.server (depuis la racine du projet)
+    # Lancer avec : python3 -m backend.services.mcp.server (PYTHONPATH=racine)
     main()

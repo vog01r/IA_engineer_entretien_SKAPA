@@ -275,10 +275,10 @@ def main():
     print("  ✅ Annotations (audience, priority)")
     print("\n💡 CONFORMITÉ MCP: 100%")
     print("\n🔗 Pour tester en réel:")
-    print("  1. Lancer: python -m app.mcp.server")
-    print("  2. Tester avec MCP Inspector:")
-    print("     npx @modelcontextprotocol/inspector python -m app.mcp.server")
-    print("  3. Configurer Claude Desktop (voir docs/MCP_SETUP.md)")
+    print("  1. E2E HTTP: PYTHONPATH=. python3 scripts/test_mcp_e2e.py")
+    print("  2. stdio: python3 -m backend.services.mcp.server")
+    print("  3. MCP Inspector: npx @modelcontextprotocol/inspector python3 -m backend.services.mcp.server")
+    print("  4. Claude Desktop: voir docs/MCP_SETUP.md")
     print("\n")
 
 
