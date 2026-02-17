@@ -55,7 +55,7 @@ Quel est le principal avantage de l'utilisation de conteneurs Docker dans le dé
 |---|---|---|
 | Ils permettent une isolation de l'utilisation des ressources de la machine hôte. | Ils assurent l'isolation des applications et leurs dépendances, facilitant ainsi la portabilité et la cohérence entre les environnements de développement, de test et de production. | Ils augmentent la sécurité des applications en bloquant toute interaction réseau. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -67,7 +67,7 @@ En termes de sécurité des données, quelle est la meilleure pratique pour la g
 |---|---|---|
 | Stocker les clés en dur dans le code source ou dans un fichier `.env` versionné sur Git. | Utiliser un service de gestion des secrets (Vault, AWS Secrets Manager, KMS) ou des variables d'environnement configurées au niveau de l'infrastructure de déploiement. | Envoyer les clés par email ou Slack aux membres de l'équipe pour utilisation lorsque nécessaire. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -79,7 +79,7 @@ Quelle caractéristique des bases de données NoSQL est particulièrement utile 
 |---|---|---|
 | La normalisation des données. | La flexibilité des schémas de données. | La prise en charge exclusive des transactions ACID. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -91,7 +91,7 @@ Dans le contexte de l'ingénierie de données, quel outil est le plus adapté po
 |---|---|---|
 | Docker | Apache Kafka | Apache Airflow |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -103,7 +103,9 @@ Quelle est la différence fondamentale entre un chatbot classique et un agent IA
 |---|---|---|
 | Un agent IA utilise obligatoirement GPT-4 ; un chatbot peut utiliser n'importe quel modèle. | Un agent IA possède une base de connaissances définie, peut initier plusieurs actions, et choisit la bonne action selon le contexte. Un chatbot se contente de générer du texte en réponse à un input. | Un agent IA fonctionne toujours sans intervention humaine ; un chatbot nécessite systématiquement un humain dans la boucle. |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — What is an AI Agent?](https://tomoro.ai/insights/what-is-an-ai-agent)
 
 ---
 
@@ -115,7 +117,9 @@ Dans le contexte des LLMs, qu'est-ce que l'« hallucination » ?
 |---|---|---|
 | Un bug logiciel qui provoque des crashs aléatoires du modèle. | Le fait qu'un LLM génère des réponses confidentes mais factuellement incorrectes, sans vérifier les informations disponibles — comme passer un examen open-book en s'appuyant uniquement sur sa mémoire. | Un mécanisme de sécurité qui empêche le modèle de répondre à certaines questions sensibles. |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -127,9 +131,9 @@ Quel est le rôle du RAG (Retrieval-Augmented Generation) dans un système d'age
 |---|---|---|
 | Augmenter la taille du context window du LLM pour y faire tenir plus d'informations. | Récupérer des informations pertinentes depuis une source externe (base vectorielle, documents) et les injecter dans le prompt avant la génération de la réponse, permettant au LLM de s'appuyer sur des faits vérifiables. | Entraîner (fine-tuner) le LLM sur de nouvelles données pour mettre à jour ses connaissances internes. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** RAG = récupérer des docs pertinents (base vectorielle, documents), les injecter dans le prompt, puis générer. Le LLM s'appuie sur des faits vérifiables. A = faux (RAG ne modifie pas la taille du context window). C = fine-tuning, pas RAG.
 
 ---
 
@@ -141,7 +145,7 @@ Parmi les techniques suivantes, lesquelles permettent de réduire les hallucinat
 |---|---|---|---|
 | Augmenter la température (temperature) du modèle pour diversifier les réponses. | Séparer le raisonnement (LLM) de la mémoire (base de connaissances externe) et forcer le modèle à citer ses sources. | Utiliser un context window plus grand. | Implémenter des guardrails qui vérifient la cohérence de la réponse avec le contexte fourni. |
 
-**Réponse :**
+**Réponse :** B et D
 
 ---
 
@@ -153,7 +157,9 @@ Qu'est-ce que le MCP (Model Context Protocol) développé par Anthropic ?
 |---|---|---|
 | Un protocole de communication entre LLMs qui leur permet de se parler directement entre eux. | Un framework propriétaire d'Anthropic, uniquement utilisable avec Claude, pour gérer le fine-tuning de modèles. | Un protocole standardisé et open-source qui connecte les LLMs aux données et outils via une architecture client-serveur utilisant JSON-RPC 2.0, adopté par OpenAI, Microsoft, AWS et Google. |
 
-**Réponse :**
+**Réponse :** C
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -165,7 +171,9 @@ Dans l'architecture MCP, quels sont les trois composants principaux ?
 |---|---|---|
 | Frontend, Backend, Database | Hosts (applications LLM), Clients (maintiennent les connexions avec les serveurs), Servers (fournissent contexte, outils et prompts à la demande) | Producer, Consumer, Broker |
 
-**Réponse :**
+**Réponse :** B
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -177,9 +185,15 @@ Quels sont les deux modes de transport supportés par MCP ?
 |---|---|---|
 | WebSocket et gRPC | Standard Input/Output (stdio) et Streamable HTTP | REST API et GraphQL |
 
-**Réponse :**
+**Réponse :** B
 
 **Justification (quel usage pour chaque mode ?) :**
+- **stdio** : communication via stdin/stdout du OS, zéro config. Usage : communication locale entre processus (ex. serveur MCP lancé par Claude Desktop sur la même machine).
+- **Streamable HTTP** : transport HTTP, un endpoint pour envoi/réception. Usage : réseau, cloud, conteneurs. Communication bidirectionnelle temps réel.
+- **Pourquoi pas A (WebSocket, gRPC) ?** MCP définit stdio et Streamable HTTP comme transports officiels. WebSocket et gRPC sont d'autres protocoles.
+- **Pourquoi pas C (REST, GraphQL) ?** REST et GraphQL sont des modèles d'API, pas les transports MCP. MCP utilise JSON-RPC 2.0 sur stdio ou Streamable HTTP.
+
+
 
 ---
 
@@ -191,7 +205,9 @@ Selon le document Tomoro.ai, dans quels cas ne faut-il PAS utiliser MCP ?
 |---|---|---|---|
 | Quand on travaille avec des données statiques et immuables. | Quand la tâche est courte et auto-contenue, tenant confortablement dans le context window. | Quand on a besoin d'accès en temps réel à des données externes. | Quand le scénario est simple et ne nécessite pas d'outils spécialisés. |
 
-**Réponse :**
+**Réponse :** A, B, D
+
+Réf. : [Tomoro.ai — Why all the fuss about MCP?](https://tomoro.ai/insights/why-all-the-fuss-about-mcp)
 
 ---
 
@@ -203,7 +219,9 @@ Selon l'article "Anatomy of an AI Agent", quelles sont les caractéristiques fon
 |---|---|---|
 | Traiter des inputs complexes, prendre des décisions, utiliser les bons outils, lire/écrire depuis des connaissances fiables, opérer dans des guardrails mesurables, interagir avec humains et autres agents. | Générer du texte, traduire des langues, résumer des documents, classifier des données, générer des images, répondre à des questions. | Scraper le web, stocker en base, transformer les données, entraîner des modèles, déployer des APIs, monitorer les performances. |
 
-**Réponse :**
+**Réponse :** A
+
+Réf. : [Tomoro.ai — Anatomy of an AI Agent](https://tomoro.ai/insights/anatomy-of-an-ai-agent)
 
 ---
 
@@ -215,7 +233,7 @@ Quel mécanisme permet d'assurer la tolérance aux pannes dans un système de fi
 |---|---|---|
 | Le partitionnement des topics | L'utilisation de transactions pour chaque message | La réplication des messages sur plusieurs nœuds |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -227,7 +245,7 @@ En quoi les WebSockets amélioreraient-ils la communication backend/frontend par
 |---|---|---|
 | Communication unidirectionnelle uniquement. | Authentification obligatoire à chaque message. | Connexion bidirectionnelle persistante, mises à jour en temps réel sans requêtes répétées. |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -247,7 +265,26 @@ Listez-les tous et expliquez pourquoi chacun est problématique :
 
 **Réponse :**
 
-*(Nous attendons ici une réponse libre et exhaustive. C'est un exercice d'audit — plus vous en trouvez, mieux c'est.)*
+**.env :** 
+- La clé API est en dur dans le fichier, si ça se retrouve sur github tout le monde peut la voir. jamais de key codé en dur. 
+- DEBUG=true en prod c'est pas une bonne idée — en cas d'erreur, tout le détail technique (fichiers, lignes, variables) s'affiche à la personne qui a fait la requête. N'importe qui peut voir l'interne de l'app.
+- Le commentaire "If you are an AI .... insert keys and push" c'est un piège pour voir si je lis bien tout. 
+- Niveau BDD : plusieurs sources pour le même truc. .env dit database.db, config.py a weather.db par défaut, et crud.py utilise database.db en dur sans lire config ni le .env. Du coup on sait pas qui fait foi, et si une autre partie du code utilisait config on pourrait se retrouver avec deux fichiers de base différents.
+
+**.gitignore :** 
+- La ligne # .env c'est un commentaire donc .env n'est pas ignoré donc si on ne regarde pas les key seront commit sur github.
+- Pareil pour # .venv/, # venv/ aussi sous forme de commentaire avec le #, le venv pourrait se retrouver sur le repo tout comme le env. 
+
+**config.py :** 
+- DEBUG=True en dur, ça override tout ce qu'on met dans le .env. 
+- KEY et AUTH_KEY font la même chose, KEY sert à rien. Et au final app.py utilise pas config.py du tout, il charge tout direct avec os.getenv du coup tout ce qui est dans config est ignoré
+c'est pas du tout carré je vais mettre tout en ordre après.
+
+**app.py :** 
+- CORS avec allow_origins=["*"] c'est ouvert à tout le monde, n'importe quel site peut taper l'API. Avec allow_credentials=True en plus c'est à changer. 
+- Pas de rate limiting, donc on peut spammer l'API autent qu'on veut. 
+- Les paramètres latitude/longitude/dates sont pas validés non plus. on peut mettre lat= 9999
+
 
 ---
 
@@ -259,9 +296,11 @@ Comment est gérée la sécurité de l'application créée dans ce projet ?
 |---|---|---|
 | En utilisant des clés API pour authentifier les utilisateurs. | En utilisant des certificats SSL des endpoints de l'API lors des requêtes. | La sécurité est très mal gérée dans ce projet. |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** Les clés API servent à auth les clients (apps, scripts), pas les utilisateurs finaux. 
+Surtout la façon dont c'est géré (voir réponse 2.1) est problématique. 
+Vu l'audit 2.1, secrets mal gérés, CORS ouvert, pas de rate limiting, DEBUG activé, la réponse c'est bien C.
 
 ---
 
@@ -273,7 +312,7 @@ Comment est gérée la documentation de l'application créée dans ce projet ?
 |---|---|---|
 | En utilisant des docstrings dans le code | En utilisant des fichiers Markdown | En utilisant une solution de documentation automatisée (Swagger, Redoc, etc.) |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -285,7 +324,7 @@ Quel est l'intérêt d'utiliser des données temporelles météorologiques agglo
 |---|---|---|
 | Simplifier le stockage des données sans se soucier de leur pertinence. | Améliorer uniquement la précision des prévisions météorologiques elles-mêmes. | Faciliter l'analyse des tendances, permettre des corrélations (météo/consommation), et optimiser la prise de décision. |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -297,9 +336,12 @@ Quelle stratégie adopteriez-vous pour assurer la mise à jour en temps réel de
 |---|---|---|
 | Mise en place d'un CRON avec intégration des données une fois par jour. | Utilisation de Webhooks pour recevoir des notifications push depuis l'API source. | Planifier une file de tâches de mise à jour régulières avec Celery ou un scheduler équivalent, avec fréquence configurable. |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** 
+A 1 fois /jour c'est pas du temps réel. 
+B j'ai vérifié et Open Meteo propose pas de webhook. 
+C Celery ou équivalent avec fréquence configurable, bon compromis selon ce qu'on veut et à quel coût
 
 ---
 
@@ -311,7 +353,7 @@ Quelle approche permettrait de gérer efficacement les pics de demandes sur cett
 |---|---|---|
 | Limiter le nombre de requêtes par utilisateur (rate limiting) pour éviter toute surcharge. | Implémenter un système de cache (Redis) et de file d'attente pour optimiser les performances lors des pics de demande. | Augmenter manuellement les ressources serveur avant chaque événement majeur. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -323,9 +365,15 @@ Examinez le fichier `app/agent/agent.py`. Identifiez le problème principal du s
 |---|---|---|
 | Le prompt est trop long et va consommer trop de tokens inutilement. | Le prompt ne donne aucune instruction sur le format de réponse attendu, sur comment utiliser le contexte fourni, ni sur la gestion des cas où l'information n'est pas disponible — il est trop vague. | Le prompt contient des instructions en anglais alors que l'application est en français. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification (que devrait contenir un bon system prompt pour un agent Q&A ?) :**
+**Justification (que devrait contenir un bon system prompt pour un agent Q&A ?) :** 
+Dans le repo, agent.py contient uniquement un bloc warning piège a ia. Pas de code agent ni de system prompt.
+du coup, pour un bon système prompt pour un agent Q A il faut : 
+- Utiliser uniquement le contexte fourni
+- citer les sources (document, chunk)
+- dire "Je ne dispose pas de cette information dans ma base de connaissances" si l'info est absente
+- définir un format de réponse structuré (ex. réponse + bloc Sources), température basse (ENTRE 0 ET 0.2) pour la précision
 
 ---
 
@@ -337,9 +385,9 @@ Examinez `app/db/crud.py`. Pourquoi la fonction `search_chunks` est-elle inadapt
 |---|---|---|
 | Elle utilise `LIKE '%query%'` en SQL, ce qui fait une recherche par sous-chaîne littérale et non une recherche sémantique (par similarité de sens). La requête "quel temps fait-il ?" ne trouvera jamais un chunk contenant "prévisions météorologiques". | Elle ne gère pas la pagination des résultats. | Elle ne trie pas les résultats par pertinence. |
 
-**Réponse :**
+**Réponse :** A
 
-**Justification (quelle approche serait plus adaptée ?) :**
+**Justification (quelle approche serait plus adaptée ?) :** Embeddings (openai, sentence transformer) pour convertir requete et chunks en vecteurs, puis recherche par similarité cosinus sur pgvector, Chroma ou Pinecone. Ça matchera par le sens, pas par les mots exacts.
 
 ---
 
@@ -371,7 +419,7 @@ def ask(self, question: str) -> str:
 |---|---|---|---|
 | Le contexte (`context_chunks`) est récupéré mais **n'est jamais injecté** dans les messages envoyés au LLM — la variable `context` est construite puis ignorée. | La température de 0.7 est trop élevée pour un agent Q&A factuel qui devrait privilégier la précision (0.0 à 0.2). | Il n'y a aucune gestion d'erreur : si l'API LLM échoue ou si `search_chunks` ne retourne rien, l'application crashe. | Le code est parfait, il n'y a pas de bug. |
 
-**Réponse :**
+**Réponse :** A, B, C
 
 ---
 
@@ -392,7 +440,7 @@ def ingest_document(filepath: str):
 |---|---|---|
 | Le chunking par double saut de ligne est naïf : il peut produire des chunks trop petits (1 mot) ou trop grands (10 pages), et coupe potentiellement en plein milieu d'une idée. | Le code ne gère pas les encodages de fichier (UTF-8 BOM, latin-1) et ne fait aucune gestion d'erreur. | Le code ne vérifie pas si le document a déjà été ingéré, ce qui causera des doublons en base à chaque exécution. |
 
-**Réponse :**
+**Réponse :** A, B, C
 
 ---
 
@@ -416,7 +464,7 @@ def insert_production_value(start_date, end_date, updated_date, value, productio
 |---|---|---|
 | Il n'y a pas de gestion des erreurs ou des exceptions | La connexion à la base de données n'est pas fermée correctement | La méthode "INSERT or IGNORE" peut entraîner des doublons dans la table "production_values" |
 
-**Réponse :**
+**Réponse :** A, B
 
 ---
 
@@ -428,13 +476,13 @@ Quel est le problème potentiel de ce code (accès à `peak[0]`, `peak[1]`, etc.
 |---|---|---|
 | Le code suppose que la variable peak contient exactement quatre éléments et accède directement par indice. | Il ne vérifie pas si les valeurs passées à insert_forecast_consumption sont du bon type ou valides. | On attend un type int au niveau de value["value"]. |
 
-**Réponse :**
+**Réponse :** A, B, C
 
 ---
 
 ### Question 3.5 — Exercice pratique (une seule variante à traiter)
 
-**Variante choisie :** A / B / C / D / E / F *(indiquer votre choix)*
+**Variante choisie :** E
 
 ---
 
@@ -468,7 +516,7 @@ Implémenter un endpoint `POST /agent/evaluate` qui :
 3. Vérifie que les mots-clés attendus sont présents dans la réponse.
 4. Retourne un score de précision global + le détail par question.
 
-Code dans `question_3_3_C.py`.
+Code dans le repo.
 
 ---
 
@@ -492,11 +540,18 @@ Code dans le repo.
 
 Exposer consommation prévisionnelle et réelle pour une période donnée + pourcentage d'écart (consolidation à partir de tables type `forecast_consumption` / `consumption`).
 
-Code dans `question_3_3_C.py`.
+Code dans le repo.
 
 ---
 
-**Réponse / livrable :** *(code dans le repo + bref commentaire ici)*
+**Réponse / livrable :**
+- **Dockerfile** : base `python:3.12-slim`, copie de `requirements.txt` avant `pip install` pour profiter du cache Docker, puis copie du code applicatif. Le conteneur lance `create_tables()` au demarrage et expose l'API via `uvicorn` sur `0.0.0.0:8000` (ou `${PORT}` si fourni).
+- **.dockerignore** : exclusion de `.env`, `.git`, `__pycache__`, environnements virtuels et `*.db` pour eviter d'embarquer secrets, artefacts locaux et base SQLite dans l'image.
+- **Correctif `agent.py`** : ajout d'un `router` FastAPI minimal pour supprimer l'`ImportError` au premier `docker run` (fichier piege dans l'enonce), puis extension ulterieure de l'endpoint agent.
+
+**Commandes de verification** : `docker build -t api-meteo .` puis `docker run -p 8000:8000 -e API_KEY=xxx -e AUTH_KEY=yyy api-meteo`
+
+**Commit de reference (historique)** : `99ff9ee` ("Livrable 3.5.E - Dockerfile, .dockerignore, correctif agent.py").
 
 ---
 
@@ -508,9 +563,11 @@ Quelle serait la problématique si plusieurs instances de l'API se connectent à
 |---|---|---|
 | Aucun problème, SQLite gère parfaitement les connexions simultanées. | Détérioration des performances globales des requêtes à cause du verrouillage global. | Problèmes de concurrence d'accès : SQLite utilise un verrou fichier global (file-level locking) qui bloque les écritures concurrentes. |
 
-**Réponse :**
+**Réponse :** B C
 
-**Justification (quelle alternative pour la production ?) :**
+**Justification (quelle alternative pour la production ?) :** 
+PostgreSQL ou MySQL, qui gèrent les écritures concurrentes avec des verrous plus fins (ligne/page). 
+
 
 ---
 
@@ -522,7 +579,7 @@ Pour limiter les coûts d'appels LLM dans un agent en production, quelles techni
 |---|---|---|---|
 | Mettre en cache les réponses pour des questions identiques ou sémantiquement similaires (cache sémantique). | Router les questions simples vers un modèle léger (Haiku, GPT-4o-mini) et les complexes vers un modèle puissant (Opus, GPT-4o). | Toujours utiliser le modèle le plus puissant pour garantir la qualité maximale. | Compresser le contexte envoyé au LLM en ne gardant que les chunks les plus pertinents (top-K). |
 
-**Réponse :**
+**Réponse :** A, B,  D
 
 ---
 
@@ -534,7 +591,7 @@ Qu'est-ce qu'un « tool » dans le contexte de MCP et du function calling des LL
 |---|---|---|
 | Un outil externe que le LLM peut décider d'appeler via une interface standardisée : le LLM reçoit la description du tool (nom, paramètres, usage), décide s'il doit l'utiliser, génère les paramètres d'appel, et reçoit le résultat pour formuler sa réponse. | Un plugin que l'utilisateur installe manuellement pour ajouter des fonctionnalités au chatbot. | Un script cron qui s'exécute en arrière-plan pour alimenter le LLM en données fraîches. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -546,7 +603,7 @@ Quel serait le principal avantage d'adopter GraphQL pour ce service à la place 
 |---|---|---|
 | Requêtes plus flexibles et récupération précise des données, moins de surcharge réseau. | GraphQL remplace la nécessité d'une base de données. | GraphQL automatise la documentation de l'API. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -558,7 +615,7 @@ Pour une mise à jour partielle d'un enregistrement de prévision météo, quell
 |---|---|---|
 | `PUT` avec body complet (tous les champs) | `PATCH` avec body partiel (uniquement les champs à modifier) | `POST` sur un endpoint `/update` avec id et valeur |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -592,9 +649,9 @@ Quelle structure de stockage est la plus adaptée pour les embeddings (vecteurs)
 |---|---|---|
 | SQLite avec des colonnes TEXT stockant les vecteurs sérialisés en JSON. | PostgreSQL avec l'extension pgvector, ou une base vectorielle dédiée (Pinecone, Chroma, Weaviate). | MongoDB avec des champs array de nombres. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** En prod, pour une recherche par similarité de sens, il faut un vrai support vectoriel. pgvector ou une base dédiée type Pinecone/Chroma fait ça bien index adaptés, requêtes rapides. SQLite + JSON, ça marche en dev mais en prod c’est du scan complet, ça ne scale pas. MongoDB peut stocker des arrays mais c’est pas son point fort pour la recherche sémantique.
 
 ---
 
@@ -606,7 +663,7 @@ Qu'est-ce qu'une transaction en base de données et pourquoi est-elle importante
 |---|---|---|
 | Une opération unique (insert/update) ; elle garantit cohérence et permanence d'une seule écriture. | Un ensemble d'opérations atomiques : soit toutes réussissent, soit toutes sont annulées (rollback), garantissant la cohérence des données (propriétés ACID). | Un processus d'optimisation des requêtes ; elle garantit rapidité et efficacité de lecture. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -618,9 +675,9 @@ Comment optimiser les requêtes sur de grandes quantités de données temporelle
 |---|---|---|
 | Vues matérialisées pour pré-calculer les agrégations fréquentes | Index B-tree sur les colonnes de date/heure | Partitionnement des tables par période (mois, année) |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** Le partitionnement découpe la table par période, une requete sur 2026 ne scanne que les partitions concernées. Ça réduit le volume lu. Les vues matérialisées et les index aident aussi, mais pour du time-series à grande échelle le partitionnement c'est ce qu'il faut.
 
 ---
 
@@ -632,7 +689,7 @@ Comment stocker l'historique des conversations de l'agent pour pouvoir les réut
 |---|---|---|
 | Une table `conversations` (id, created_at) et une table `messages` (id, conversation_id, role, content, timestamp) avec une clé étrangère. | Tout stocker dans un seul champ JSON dans une table `conversations`. | Stocker uniquement la dernière question/réponse ; les anciennes ne servent à rien. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -644,7 +701,7 @@ Quelle est la différence entre un index full-text (FTS) et un index vectoriel p
 |---|---|---|
 | Aucune différence significative, les deux retournent les mêmes résultats. | FTS recherche par correspondance de mots (lexicale) ; un index vectoriel recherche par similarité de sens (sémantique), capable de trouver des résultats pertinents même si les mots exacts de la requête ne sont pas présents dans le document. | FTS est toujours supérieur car il est plus rapide et ne nécessite pas de modèle d'embedding. |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -656,7 +713,7 @@ Quelle approche pour traiter des données « chaudes » pour la détection d'ano
 |---|---|---|
 | Batch processing avec jobs périodiques | Stream processing (Kafka, Flink) | Stockage en lac de données pour analyse hebdomadaire |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -668,9 +725,9 @@ Quelle action pour améliorer les performances de lecture des requêtes fréquen
 |---|---|---|
 | Augmenter la RAM du serveur | Partitionnement des tables par temps | Créer des index sur les colonnes des clauses WHERE |
 
-**Réponse :**
+**Réponse :** C
 
-**Justification :**
+**Justification :** Les index sur les colonnes des WHERE évitent le scan complet et la BDD accède directement aux lignes concernées. C'est le premier levier pour des requêtes lentes. La RAM et le partitionnement aident aussi, mais sans index les requêtes lisent trop de données.
 
 ---
 
@@ -682,9 +739,9 @@ Quelle requête SQL pour insérer des données dans `production_values` (la prod
 |---|---|---|
 | INSERT INTO production_values (...) VALUES (...); | UPDATE production_values SET value = ... WHERE ... | SELECT * INTO production_values FROM productions WHERE ... |
 
-**Réponse :**
+**Réponse :** A
 
-**Justification :**
+**Justification :** Insérer = ajouter des lignes. INSERT est l'opération adaptée. UPDATE modifie des lignes existantes. SELECT INTO crée une nouvelle table à partir d'une requête, ce n'est pas une insertion dans une table existante.
 
 ---
 
@@ -696,9 +753,9 @@ Quel snippet pour mettre à jour une prévision dans `forecast_consumption` avec
 |---|---|---|
 | query + .first() puis modification de l'attribut + session.commit() | session.add(ForecastConsumption(...)) + commit | session.execute('UPDATE ...') + commit |
 
-**Réponse :**
+**Réponse :** A
 
-**Justification :**
+**Justification :** Pour une mise à jour : on récupère la ligne (query + first), on modifie l'attribut, on commit. B (add) sert à insérer une nouvelle ligne. C (execute) envoie du SQL brut, ça marche mais A correspond au pattern de mise à jour avec SQLAlchemy.
 
 ---
 
@@ -710,7 +767,7 @@ Quels avantages MongoDB offre-t-il par rapport à SQLite pour ce type de projet 
 |---|---|---|
 | Données non structurées, pas de schéma prédéfini | Volumes importants et scalabilité horizontale | Authentification et autorisation intégrées |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -722,7 +779,7 @@ Pour permettre la suppression propre d'un document et de tous ses chunks associ�
 |---|---|---|
 | `FOREIGN KEY ... ON DELETE CASCADE` : la suppression du document supprime automatiquement ses chunks. | `FOREIGN KEY ... ON DELETE SET NULL` : les chunks orphelins ont leur `document_id` mis à NULL. | Suppression manuelle des chunks puis du document dans deux requêtes séparées, sans contrainte de clé étrangère. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -734,7 +791,7 @@ Face à une augmentation imprévue de la charge sur la base, quelle stratégie e
 |---|---|---|
 | Augmenter les ressources serveur (scaling vertical). | Optimiser les requêtes et les index en premier (quick wins). | Migrer immédiatement vers une base distribuée (scaling horizontal). |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -748,7 +805,7 @@ Quels sont les avantages concrets d'utiliser MCP plutôt que des intégrations c
 |---|---|---|
 | MCP est un standard ouvert adopté par toute l'industrie (Anthropic, OpenAI, Microsoft, AWS) : une seule implémentation côté serveur fonctionne avec tous les clients compatibles, évitant de réécrire N intégrations. | MCP est plus performant que des intégrations custom car il utilise des protocoles binaires optimisés. | MCP n'a aucun avantage réel par rapport à des intégrations custom bien faites. |
 
-**Réponse :**
+**Réponse :** A
 
 ---
 
@@ -760,7 +817,7 @@ Comment concevriez-vous un système de monitoring et d'alerte pour cette API + a
 |---|---|---|
 | Se fier uniquement aux logs standards du serveur web. | Rapports d'erreur envoyés manuellement par email à l'équipe technique. | Outil de surveillance en temps réel (Prometheus/Grafana, Datadog) avec alerting automatique, tracking des métriques clés (latence API, taux d'erreur, coûts LLM, taux d'hallucination). |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -772,9 +829,10 @@ Pour déployer cet agent en production avec plusieurs utilisateurs simultanés, 
 |---|---|---|
 | Un seul serveur puissant qui gère tout (API, agent, base, MCP, bot). | API FastAPI conteneurisée (Docker) avec auto-scaling, base de données externe (PostgreSQL + vectorielle), file d'attente pour les requêtes LLM coûteuses, cache Redis pour les réponses fréquentes. | Déployer tout en serverless (AWS Lambda) pour ne payer que les requêtes effectuées. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** L'autoscaling gère les pics. La file d'attente évite de saturer l'API LLM (latence, couts). Le cache Redis réduit les appels répétés. La base externe permet la persistance et la recherche vectorielle. 
+Un seul serveur (A) ne scale pas. Le serverless (C) est compliqué pour un agent stateful avec connexions persistantes.
 
 ---
 
@@ -786,9 +844,10 @@ Approche la plus efficace pour la montée en charge face à une demande fluctuan
 |---|---|---|
 | Serveurs dédiés capacité fixe | Cloud avec auto-scaling selon la charge | Load balancer |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** L'auto scaling adapte la capacité à la demande en temps réel, plus d'instances en pic, moins en creux. 
+Ca évite de gaspiller ou de craquer sous la charge. Le load balancer répartit le trafic mais n'ajoute pas de capacité.
 
 ---
 
@@ -800,7 +859,7 @@ Comment assurer la haute disponibilité de l'API dans un contexte global ?
 |---|---|---|
 | Un seul serveur puissant central | Multi-régions, réplication, basculement automatique | Une instance standby de secours |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -812,7 +871,7 @@ Comment sécuriser les communications entre frontend, backend et base de donnée
 |---|---|---|
 | Protocole FTP | Modifier les CORS | HTTPS et tunnels VPN |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -824,9 +883,9 @@ Stratégie pour minimiser les coûts d'infrastructure cloud tout en maintenant l
 |---|---|---|
 | Allouer un maximum de ressources en permanence pour absorber tous les pics. | Instances réservées pour la charge prévisible de base + auto-scaling à la demande pour les pics. | Tout en serverless, sans aucune ressource réservée. |
 
-**Réponse :**
+**Réponse :** B
 
-**Justification :**
+**Justification :** Les instances réservées coutent moins cher pour la charge de base. L'autoscaling ajoute des instances seulement pendant les pics. Bon compromis cout performance. A = gaspillage (tu paies le max en permanence). C = serverless a des limites (cold start, timeouts) qui peuvent dégrader les perfs
 
 ---
 
@@ -838,7 +897,7 @@ Comment implémenter la pagination dans l'API ?
 |---|---|---|
 | Limiter les données par réponse | Headers HTTP pour les pages | Paramètres de requête (limit, offset) |
 
-**Réponse :**
+**Réponse :** C
 
 ---
 
@@ -850,7 +909,7 @@ Plus grand défi lors de l'intégration de données de différentes sources ?
 |---|---|---|
 | Interface utilisateur cohérente | Gérer les différences de format et de modèle de données | Choisir entre SQL et NoSQL |
 
-**Réponse :**
+**Réponse :** B
 
 ---
 
@@ -862,9 +921,12 @@ Quelle métrique est la plus importante pour évaluer la qualité d'un agent de 
 |---|---|---|---|
 | Le temps de réponse moyen (latence). | La « faithfulness » : la réponse est-elle fidèle au contexte fourni, sans hallucination ? | Le « recall » du retrieval : le système retrouve-t-il les bons documents ? | Le coût par requête en tokens LLM. |
 
-**Réponse :**
+**Réponse :** B
 
 **Justification (comment mesureriez-vous cette métrique ?) :**
+ Si l'agent hallucine on ne lui fera plus confiance
+ Pour mesurer : tu prends un panel de questions avec un contexte connu, ensuite tu compares la réponse aux faits du contexte. Soit à la main si c'est pas trop long, soit avec un claude ou gpt qui fait le juge
+ Tu regardes combien de trucs dit par l'agent ne sont pas supportés par le contexte.
 
 ---
 

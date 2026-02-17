@@ -1,0 +1,39 @@
+/* Design system - SKAPA */
+.skapa-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.skapa-btn {
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.skapa-btn-primary {
+  background: var(--color-accent);
+  color: white;
+}
+
+.skapa-btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.skapa-btn-primary:disabled {
+  background: #a8a29e;
+  cursor: not-allowed;
+}
+
+.skapa-input {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.skapa-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}

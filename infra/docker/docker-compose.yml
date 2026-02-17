@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/skapa.db
+      - JWT_SECRET=${JWT_SECRET}
+      - API_KEY=${API_KEY}
+      - COOKIE_SECURE=false
+    volumes:
+      - ../../data:/app/data
+    networks:
+      - skapa-network
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../infra/docker/Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - skapa-network
+
+networks:
+  skapa-network:
+    driver: bridge

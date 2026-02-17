@@ -88,6 +88,36 @@ Utilisateur Telegram
 
 **Note :** Seule **une variante** de la question 3.3 est à traiter (A, B ou C au choix).
 
+## 🏗️ Architecture
+
+**Structure du projet (après restructuration) :**
+
+```
+backend/          # Backend FastAPI (API + Services)
+├── web/          # API Web (JWT auth) - Frontend, utilisateurs
+├── services/     # Services externes (API Key auth) - Bot, MCP
+└── shared/       # Code partagé (config, DB, cache)
+
+frontend/         # Frontend React + Vite + Tailwind
+docs/             # Documentation technique
+scripts/          # Scripts utilitaires (tests, ingestion)
+infra/            # Infrastructure & déploiement
+```
+
+**Décisions techniques :** Voir [`DECISIONS.md`](DECISIONS.md) — justifications de chaque choix (auth, cache, MCP, structure, rate limiting).
+
+**Documentation :** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) · [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+
+**Corrections et implémentations :**
+- ✅ Sécurité : JWT httpOnly cookies, suppression clé frontend, timing attack fix
+- ✅ Auth duale : JWT (web) + API Key (bot/MCP) — routes protégées
+- ✅ Rate limiting : slowapi sur /auth et /agent
+- ✅ Cache intelligent : géocodage 24h, météo 10min
+- ✅ MCP conforme protocole standard (stdio + streamable-http)
+- ✅ Structure claire : web/ services/ shared/ infra/
+
+---
+
 ## Rendus attendus
 
 Tout via **Pull Request vers `main`**. Voir `INSTRUCTIONS_QCM.md` pour les détails complets.
@@ -97,7 +127,7 @@ Tout via **Pull Request vers `main`**. Voir `INSTRUCTIONS_QCM.md` pour les déta
 | QCM | `INSTRUCTIONS_QCM.md` complété (5 parties, 35+ questions) |
 | Corrections backend | Bugs et failles de sécurité identifiés et corrigés (commits séparés) |
 | Frontend | Interface web fonctionnelle (météo, chat agent, données) |
-| Serveur MCP | 3+ tools dans `app/mcp/server.py`, connectable Claude Desktop |
+| Serveur MCP | 3+ tools dans `backend/services/mcp/server.py`, connectable Claude Desktop — voir `docs/MCP_SETUP.md` |
 | Bot Telegram | Agent conversationnel météo dans `app/bot/` |
 | Exercice 3.3 | Une variante au choix (A, B ou C) |
 | Exercice 3.8 | Script d'analyse `question_3_8.py` |
