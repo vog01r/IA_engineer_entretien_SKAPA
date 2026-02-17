@@ -18,6 +18,8 @@ Sécurité :
 - Pas de cache user (query DB à chaque requête pour données fraîches)
 """
 
+import secrets
+
 from fastapi import Cookie, Depends, HTTPException, Header, Request, status
 
 from backend.shared.config import API_KEY, COOKIE_NAME
@@ -61,7 +63,7 @@ async def get_current_user(
     
     Sécurité :
         - JWT vérifié (signature + expiration)
-        - API Key comparée en constant-time (via ==, Python 3.10+)
+        - API Key comparée en constant-time (secrets.compare_digest, résistant timing attacks)
         - is_active vérifié (soft delete)
     """
     # Bypass pour OPTIONS (preflight CORS)
@@ -103,7 +105,7 @@ async def get_current_user(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="API_KEY not configured",
             )
-        if x_api_key != API_KEY:
+        if not secrets.compare_digest(x_api_key, API_KEY):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid API key",
