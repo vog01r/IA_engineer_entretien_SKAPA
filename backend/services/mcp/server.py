@@ -86,8 +86,18 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
-def get_weather(latitude: float, longitude: float) -> WeatherResponse | dict:
+@mcp.tool(
+    description="Récupère les prévisions météo pour des coordonnées GPS. "
+                "Retourne la température actuelle, les conditions météo et les prévisions 24h.",
+    annotations={
+        "audience": ["user", "assistant"],
+        "priority": 0.9,
+    }
+)
+def get_weather(
+    latitude: float = Field(..., ge=-90, le=90, description="Latitude (-90 à 90)"),
+    longitude: float = Field(..., ge=-180, le=180, description="Longitude (-180 à 180)")
+) -> WeatherResponse | dict:
     """Récupère les prévisions météo pour des coordonnées GPS.
 
     Args:
@@ -95,7 +105,8 @@ def get_weather(latitude: float, longitude: float) -> WeatherResponse | dict:
         longitude: Longitude (-180 à 180)
 
     Returns:
-        WeatherResponse ou dict avec error=True en cas d'échec
+        WeatherResponse avec current_temp, current_weather, forecasts
+        Ou dict avec error=True en cas d'échec
     """
     try:
         data = _fetch_weather_from_api(latitude, longitude)
@@ -124,16 +135,26 @@ def get_weather(latitude: float, longitude: float) -> WeatherResponse | dict:
     )
 
 
-@mcp.tool()
-def search_knowledge(query: str, limit: int = 5) -> list[dict]:
+@mcp.tool(
+    description="Recherche dans la base de connaissances de l'agent SKAPA. "
+                "Retourne les chunks les plus pertinents pour la requête.",
+    annotations={
+        "audience": ["assistant"],
+        "priority": 0.7,
+    }
+)
+def search_knowledge(
+    query: str = Field(..., min_length=2, description="Requête de recherche (mots-clés ou phrase)"),
+    limit: int = Field(5, ge=1, le=20, description="Nombre maximal de chunks à retourner")
+) -> list[dict]:
     """Recherche dans la base de connaissances de l'agent.
 
     Args:
         query: Requête de recherche (mots-clés ou phrase)
-        limit: Nombre maximal de chunks à retourner (défaut: 5)
+        limit: Nombre maximal de chunks à retourner (défaut: 5, max: 20)
 
     Returns:
-        Liste de chunks pertinents (source_file, content, chunk_index)
+        Liste de chunks pertinents avec source_file, content, chunk_index
     """
     chunks = search_chunks(query, limit=limit)
     return [
@@ -146,15 +167,24 @@ def search_knowledge(query: str, limit: int = 5) -> list[dict]:
     ]
 
 
-@mcp.tool()
-def conversation_history(limit: int = 10) -> list[dict]:
+@mcp.tool(
+    description="Récupère l'historique des conversations avec l'agent SKAPA. "
+                "Utile pour comprendre le contexte des interactions passées.",
+    annotations={
+        "audience": ["assistant"],
+        "priority": 0.5,
+    }
+)
+def conversation_history(
+    limit: int = Field(10, ge=1, le=100, description="Nombre maximal de conversations à retourner")
+) -> list[dict]:
     """Récupère l'historique des conversations avec l'agent.
 
     Args:
-        limit: Nombre maximal de conversations à retourner (défaut: 10)
+        limit: Nombre maximal de conversations à retourner (défaut: 10, max: 100)
 
     Returns:
-        Liste des dernières conversations (question, answer, created_at)
+        Liste des dernières conversations avec question, answer, sources, created_at
     """
     conversations = get_conversations(limit=limit)
     return [
@@ -168,12 +198,19 @@ def conversation_history(limit: int = 10) -> list[dict]:
     ]
 
 
-@mcp.tool()
+@mcp.tool(
+    description="Statistiques sur les données météo enregistrées en base SQLite. "
+                "Retourne le nombre de prévisions, lieux distincts et température moyenne.",
+    annotations={
+        "audience": ["user", "assistant"],
+        "priority": 0.3,
+    }
+)
 def get_weather_stats() -> dict:
     """Statistiques sur les données météo enregistrées en base.
 
     Returns:
-        Nombre total de prévisions, lieux distincts, température moyenne.
+        Dict avec total_previsions, lieux_distincts, temperature_moyenne_c
     """
     rows = get_all_weather()
     if not rows:
