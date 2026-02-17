@@ -10,7 +10,6 @@ Justifications :
 - Séparation claire front/back/services
 - Dual auth : JWT (web) + API Key (services)
 - CORS configuré pour frontend
-- Rate limiting (slowapi)
 """
 
 import os
@@ -22,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.web.auth.endpoints import router as auth_router
 from backend.web.weather.endpoints import router as weather_router
 from backend.web.agent.endpoints import router as agent_router
+from backend.web.auth.dependencies import get_current_user
 from backend.shared.config import ALLOWED_ORIGINS
 from backend.shared.cache import get_cache_stats, clear_cache
 
@@ -79,9 +79,9 @@ async def read_root():
     }
 
 
-@app.get("/cache/stats", tags=["Monitoring"])
+@app.get("/cache/stats", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
 async def cache_stats():
-    """Retourne les statistiques du cache (hits, misses, hit rate)."""
+    """Retourne les statistiques du cache (hits, misses, hit rate). Auth requise."""
     stats = get_cache_stats()
     return {
         "cache": stats,
@@ -92,8 +92,8 @@ async def cache_stats():
     }
 
 
-@app.post("/cache/clear", tags=["Monitoring"])
+@app.post("/cache/clear", tags=["Monitoring"], dependencies=[Depends(get_current_user)])
 async def cache_clear():
-    """Vide le cache (utile pour debug ou refresh forcé)."""
+    """Vide le cache (utile pour debug ou refresh forcé). Auth requise."""
     clear_cache()
     return {"message": "Cache cleared successfully"}
