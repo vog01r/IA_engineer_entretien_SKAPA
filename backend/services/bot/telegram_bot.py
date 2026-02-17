@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import re
+import time
 from urllib.parse import quote
 
 import requests
@@ -15,6 +16,7 @@ from telegram.constants import ChatAction
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from app.db.crud import create_tables, delete_alert, get_alert, get_all_alerts, upsert_alert
+from app.shared.cache import cache_with_ttl
 
 load_dotenv()
 
@@ -82,20 +84,29 @@ def _extract_place_query(text: str) -> str:
     return text
 
 
+@cache_with_ttl(ttl_seconds=86400)  # Cache 24h (coordonnées fixes)
 def _geocode_sync(query: str) -> tuple[float, float, str] | None:
-    """Géocode un lieu via Open-Meteo. Retourne (lat, lon, nom_affiché) ou None."""
+    """Géocode un lieu via Open-Meteo. Retourne (lat, lon, nom_affiché) ou None.
+    
+    Cache: 24h (les coordonnées GPS d'une ville ne changent pas).
+    """
     if len(query) < 2:
         return None
     url = (
         "https://geocoding-api.open-meteo.com/v1/search?"
         f"name={quote(query)}&count=1&language=fr"
     )
+    start = time.perf_counter()
     try:
         resp = requests.get(url, timeout=5)
         resp.raise_for_status()
         data = resp.json()
     except requests.RequestException:
         return None
+    finally:
+        elapsed = time.perf_counter() - start
+        logger.info(f"⏱️ [GEOCODING] {query!r} took {elapsed:.3f}s")
+    
     results = data.get("results") or []
     if not results:
         return None
@@ -147,6 +158,7 @@ async def start(update: Update, context) -> None:
 
 async def meteo_command(update: Update, context) -> None:
     """Handler /meteo [ville] — passe par l'agent (conformité architecture Bot → Agent → API)."""
+    start_total = time.perf_counter()
     args = context.args or []
     place = " ".join(args).strip()
     if not place:
@@ -159,6 +171,9 @@ async def meteo_command(update: Update, context) -> None:
     except requests.RequestException as e:
         logger.warning("Erreur API agent: %s", e)
         await update.message.reply_text(f"❌ Erreur : {e}. Vérifie que l'API tourne sur {API_BASE_URL}")
+    finally:
+        total = time.perf_counter() - start_total
+        logger.info(f"⏱️ [METEO_COMMAND] place={place!r} took {total:.3f}s")
 
 
 async def help_command(update: Update, context) -> None:
@@ -244,10 +259,18 @@ def is_coordinates(text: str) -> tuple[float, float] | None:
     return None
 
 
+@cache_with_ttl(ttl_seconds=600)  # Cache 10min (météo change peu)
 def _fetch_weather_via_api_sync(lat: float, lon: float) -> dict:
-    """Appelle l'API FastAPI /weather/fetch + /location (conformité architecture)."""
+    """Appelle l'API FastAPI /weather/fetch + /location (conformité architecture).
+    
+    Cache: 10min (balance entre fraîcheur des données et performance).
+    Justification: La météo change peu en 10min, acceptable pour UX.
+    """
+    start = time.perf_counter()
     base = API_BASE_URL.rstrip("/")
     headers = {"X-API-Key": API_KEY}
+    
+    fetch_start = time.perf_counter()
     fetch_resp = requests.get(
         f"{base}/weather/fetch",
         params={"latitude": lat, "longitude": lon, "forecast_days": 1},
@@ -256,7 +279,11 @@ def _fetch_weather_via_api_sync(lat: float, lon: float) -> dict:
     )
     fetch_resp.raise_for_status()
     fetch_data = fetch_resp.json()
+    logger.info(f"⏱️ [WEATHER_FETCH] took {time.perf_counter() - fetch_start:.3f}s")
+    
     summary = fetch_data.get("summary") or {}
+    
+    loc_start = time.perf_counter()
     loc_resp = requests.get(
         f"{base}/weather/location",
         params={"latitude": lat, "longitude": lon},
@@ -265,7 +292,13 @@ def _fetch_weather_via_api_sync(lat: float, lon: float) -> dict:
     )
     loc_resp.raise_for_status()
     loc_data = loc_resp.json()
+    logger.info(f"⏱️ [WEATHER_LOCATION] took {time.perf_counter() - loc_start:.3f}s")
+    
     weather_rows = loc_data.get("weather") or []
+    
+    total = time.perf_counter() - start
+    logger.info(f"⏱️ [WEATHER_TOTAL] took {total:.3f}s")
+    
     return {
         "current": {
             "temperature_2m": summary.get("current_temp"),
@@ -285,17 +318,23 @@ async def fetch_weather_api(lat: float, lon: float) -> dict:
 
 def _ask_agent_sync(question: str, chat_id: int | None = None) -> str:
     """Appelle l'agent via API backend (synchrone)."""
+    start = time.perf_counter()
     url = f"{API_BASE_URL.rstrip('/')}/agent/ask"
     headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     payload = {"question": question}
     if chat_id is not None:
         payload["chat_id"] = chat_id
-    response = requests.post(
-        url, json=payload, headers=headers, timeout=30
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data.get("answer", "Pas de réponse")
+    
+    try:
+        response = requests.post(
+            url, json=payload, headers=headers, timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("answer", "Pas de réponse")
+    finally:
+        elapsed = time.perf_counter() - start
+        logger.info(f"⏱️ [AGENT_LLM] question={question[:50]!r}... took {elapsed:.3f}s")
 
 
 async def ask_agent_api(question: str, chat_id: int | None = None) -> str:
@@ -337,6 +376,7 @@ def _format_weather_msg(weather: dict, location: str) -> str:
 
 async def handle_message(update: Update, context) -> None:
     """Handler : tous les messages passent par l'agent IA avec tools météo."""
+    start_total = time.perf_counter()
     text = update.message.text.strip()
     if not text:
         await update.message.reply_text("Envoie une ville, une question météo ou une demande d'alerte.")
@@ -355,6 +395,9 @@ async def handle_message(update: Update, context) -> None:
     except Exception as e:
         logger.exception("Erreur inattendue agent")
         await update.message.reply_text(f"❌ Erreur : {e}")
+    finally:
+        total = time.perf_counter() - start_total
+        logger.info(f"⏱️ [TOTAL_RESPONSE] user_message={text[:50]!r}... took {total:.3f}s")
 
 
 async def callback_buttons(update: Update, context) -> None:
