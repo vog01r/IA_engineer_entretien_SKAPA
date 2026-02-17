@@ -1,235 +1,468 @@
-# Architecture SKAPA - Structure Modulaire
+# 🏗️ Architecture SKAPA - Documentation Technique
 
-**Date** : Février 2026  
-**Version** : 2.0.0 (après refactoring)
+**Date:** 2026-02-17  
+**Auteur:** Benjamin Chabanis  
+**Version:** 2.0 (restructuré)
 
 ---
 
-## 📁 Structure du projet
+## 📊 Vue d'ensemble
 
 ```
-.
-├── backend/                    # Backend FastAPI (nouveau)
-│   ├── web/                   # API web (JWT auth)
-│   │   ├── auth/             # Module authentification
-│   │   │   ├── security.py   # JWT + password hashing
-│   │   │   ├── dependencies.py  # Middleware get_current_user
-│   │   │   └── endpoints.py  # Routes /auth/*
-│   │   ├── weather/          # Module météo
-│   │   └── agent/            # Module agent IA
-│   │
-│   ├── services/             # Services externes (API Key auth)
-│   │   ├── bot/             # Bot Telegram
-│   │   └── mcp/             # MCP server
-│   │
-│   ├── shared/              # Code partagé
-│   │   ├── config/         # Configuration (env vars)
-│   │   ├── db/             # Database SQLite
-│   │   └── models/         # Pydantic models
-│   │
-│   └── main.py             # Entry point FastAPI
+┌─────────────────────────────────────────────────────────────┐
+│                    SKAPA Application                        │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │ Frontend │  │ Telegram │  │   MCP    │  │  Claude  │  │
+│  │  (React) │  │   Bot    │  │  Server  │  │ Desktop  │  │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  │
+│       │             │              │              │         │
+│       └─────────────┴──────────────┴──────────────┘         │
+│                         │                                   │
+│                    ┌────▼────┐                              │
+│                    │ Backend │                              │
+│                    │ FastAPI │                              │
+│                    └────┬────┘                              │
+│                         │                                   │
+│              ┌──────────┼──────────┐                        │
+│              │          │          │                        │
+│         ┌────▼───┐ ┌───▼────┐ ┌──▼─────┐                  │
+│         │ SQLite │ │ OpenAI │ │  Open  │                  │
+│         │   DB   │ │  API   │ │ Meteo  │                  │
+│         └────────┘ └────────┘ └────────┘                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📂 Structure du projet
+
+### Organisation actuelle (après restructuration)
+
+```
+IA_engineer_entretien_SKAPA/
+├── backend/                    # Backend FastAPI (API + Services)
+│   ├── main.py                 # Entry point FastAPI
+│   ├── web/                    # API Web (JWT auth)
+│   │   ├── auth/               # Authentification utilisateurs
+│   │   ├── agent/              # Endpoints agent IA
+│   │   └── weather/            # Endpoints météo
+│   ├── services/               # Services externes (API Key auth)
+│   │   ├── bot/                # Bot Telegram
+│   │   │   └── telegram_bot.py
+│   │   └── mcp/                # Serveur MCP
+│   │       ├── server.py       # Définition tools MCP
+│   │       └── run_http.py     # Entry point HTTP
+│   └── shared/                 # Code partagé
+│       ├── config/             # Configuration
+│       ├── db/                 # Database (CRUD)
+│       ├── models/             # Modèles Pydantic
+│       └── cache.py            # Cache intelligent
 │
-├── frontend/               # Frontend React (inchangé)
+├── frontend/                   # Frontend React + Vite
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/      # LoginForm, RegisterForm
-│   │   │   └── ProtectedRoute.jsx
-│   │   ├── contexts/
-│   │   │   └── AuthContext.jsx
-│   │   └── services/
-│   │       └── api.js
+│   │   ├── components/         # Composants React
+│   │   ├── pages/              # Pages
+│   │   ├── services/           # API calls
+│   │   └── App.tsx             # Entry point
+│   ├── public/
 │   └── package.json
 │
-├── infra/                  # Infrastructure (nouveau)
-│   ├── docker/
-│   │   ├── Dockerfile.backend
-│   │   ├── Dockerfile.frontend
-│   │   └── docker-compose.yml
-│   └── railway/
-│       └── railway.toml
+├── docs/                       # Documentation
+│   ├── ARCHITECTURE.md         # Ce fichier
+│   ├── PERFORMANCE_ANALYSIS.md # Analyse performance
+│   └── MCP_SETUP.md            # Configuration MCP
 │
-├── docs/                   # Documentation
-│   ├── JWT_IMPLEMENTATION.md  # Doc complète JWT
-│   └── AUTH.md            # (ancien, à supprimer)
+├── scripts/                    # Scripts utilitaires
+│   ├── test_bot_performance.py
+│   ├── test_mcp_compliance.py
+│   └── ingest_knowledge.py
 │
-├── data/                  # Database SQLite
-│   └── skapa.db
+├── infra/                      # Infrastructure & déploiement
+│   ├── README.md               # Guide déploiement
+│   └── railway.json            # Config Railway
 │
-├── app/                   # (ancien, à supprimer après migration)
+├── data/                       # Données (knowledge base)
+│   └── knowledge/
 │
-├── requirements.txt       # Dependencies Python
-├── .env.example          # Template env vars
-└── README.md             # Ce fichier
+├── .env                        # Variables d'environnement (local)
+├── .env.example                # Template variables
+├── requirements.txt            # Dépendances Python
+├── Procfile                    # Déploiement Railway
+└── README.md                   # Documentation principale
 ```
 
 ---
 
 ## 🎯 Séparation des responsabilités
 
-### 1. Backend Web (`backend/web/`)
+### 1. Backend (`backend/`)
 
-**Authentification** : JWT avec httpOnly cookies  
-**Utilisateurs** : Utilisateurs web (navigateur)  
-**Routes** :
-- `/auth/register` - Création de compte
-- `/auth/login` - Authentification
-- `/auth/me` - Profil utilisateur
-- `/auth/refresh` - Renouvellement token
-- `/auth/logout` - Déconnexion
-- `/weather/*` - Endpoints météo (protégés JWT)
-- `/agent/*` - Endpoints agent IA (protégés JWT)
+**Rôle :** API centrale, logique métier, accès données.
 
-### 2. Services Externes (`backend/services/`)
+#### 1.1 Web (`backend/web/`)
+- **Auth** : Authentification JWT, gestion utilisateurs
+- **Agent** : Endpoints pour l'agent IA (RAG, LLM)
+- **Weather** : Endpoints météo (fetch, location, range)
 
-**Authentification** : API Key (X-API-Key header)  
-**Utilisateurs** : Bot Telegram, MCP Server  
-**Routes** : Appels directs via API Key (backward compatible)
+**Authentification :** JWT (httpOnly cookies)  
+**Usage :** Frontend React, applications web
 
-### 3. Code Partagé (`backend/shared/`)
+#### 1.2 Services (`backend/services/`)
+- **Bot Telegram** : Interface conversationnelle Telegram
+- **MCP Server** : Tools MCP pour Claude Desktop/ChatGPT
 
-**Config** : Variables d'environnement  
-**Database** : CRUD SQLite (users, weather, conversations)  
-**Models** : Pydantic models réutilisables
+**Authentification :** API Key (header `X-API-Key`)  
+**Usage :** Services externes, bots, MCP
 
-### 4. Frontend (`frontend/`)
+#### 1.3 Shared (`backend/shared/`)
+- **Config** : Variables d'environnement, CORS, constantes
+- **DB** : CRUD SQLite (weather, conversations, knowledge, alerts)
+- **Models** : Modèles Pydantic (validation, serialization)
+- **Cache** : Cache intelligent avec TTL (performance)
 
-**Framework** : React + Vite  
-**Authentification** : JWT httpOnly cookies  
-**State** : AuthContext (React Context API)
-
-### 5. Infrastructure (`infra/`)
-
-**Docker** : Dockerfiles + docker-compose  
-**Railway** : Configuration déploiement prod
+**Principe :** Code réutilisable entre web et services.
 
 ---
 
-## 🚀 Démarrage rapide
+### 2. Frontend (`frontend/`)
 
-### Développement local
+**Rôle :** Interface utilisateur web (React + Vite + Tailwind).
 
-**Backend :**
-```bash
-# Installer dependencies
-pip install -r requirements.txt
+**Features :**
+- Dashboard météo (visualisation données)
+- Chat agent IA (interface conversationnelle)
+- Gestion alertes (configuration seuils)
+- Historique conversations
 
-# Lancer le serveur
-python -m uvicorn backend.main:app --reload --port 8000
+**Authentification :** JWT (httpOnly cookies)  
+**API :** Appels vers `backend/web/`
+
+---
+
+### 3. MCP Server (`backend/services/mcp/`)
+
+**Rôle :** Exposer tools météo + knowledge base à Claude Desktop/ChatGPT.
+
+**Tools :**
+1. `get_weather` : Prévisions météo GPS
+2. `search_knowledge` : Recherche base connaissances
+3. `conversation_history` : Historique conversations
+4. `get_weather_stats` : Statistiques météo
+
+**Transports :**
+- **stdio** : Claude Desktop (local)
+- **streamable-http** : Déploiement cloud (Railway)
+
+**Conformité :** MCP Protocol (JSON-RPC 2.0, capabilities, schemas, annotations)
+
+---
+
+### 4. Bot Telegram (`backend/services/bot/`)
+
+**Rôle :** Interface conversationnelle Telegram (météo + alertes).
+
+**Features :**
+- Conversation naturelle (agent IA)
+- Commandes `/meteo`, `/alertes`, `/help`
+- Alertes personnalisées (canicule, froid)
+- Vérification périodique (toutes les heures)
+
+**Architecture :**
+```
+User → Bot → Agent API → LLM (OpenAI/Claude)
+                ↓
+         Weather API → Open-Meteo
+                ↓
+            SQLite DB
 ```
 
-**Frontend :**
+**Performance :**
+- Cache géocodage (24h)
+- Cache météo (10min)
+- Timing instrumentation (logs)
+
+---
+
+### 5. Documentation (`docs/`)
+
+**Rôle :** Documentation technique pour développeurs et recruteurs.
+
+**Fichiers :**
+- `ARCHITECTURE.md` : Ce fichier (vue d'ensemble)
+- `PERFORMANCE_ANALYSIS.md` : Analyse bottlenecks + optimisations
+- `MCP_SETUP.md` : Configuration MCP (Claude Desktop, HTTP, ChatGPT)
+
+---
+
+### 6. Infrastructure (`infra/`)
+
+**Rôle :** Déploiement, CI/CD, monitoring.
+
+**Déploiement Railway :**
+- Service 1 : Backend API (FastAPI)
+- Service 2 : Frontend (React static)
+- Service 3 : MCP Server (HTTP)
+
+**Variables d'environnement :**
+- `OPENAI_API_KEY` : Clé OpenAI
+- `TELEGRAM_BOT_TOKEN` : Token bot Telegram
+- `JWT_SECRET` : Secret JWT
+- `API_KEY` : Clé API services
+- `DATABASE_URL` : URL base de données
+
+---
+
+## 🔐 Sécurité
+
+### Authentification
+
+| Client | Méthode | Usage |
+|--------|---------|-------|
+| Frontend | JWT (httpOnly cookies) | Utilisateurs web |
+| Bot Telegram | API Key (header) | Service externe |
+| MCP Server | API Key (header) | Service externe |
+
+### Secrets
+
+**❌ JAMAIS commiter :**
+- `.env` (secrets réels)
+- `database.db` (données réelles)
+- Clés API hardcodées
+
+**✅ TOUJOURS commiter :**
+- `.env.example` (placeholders)
+- Code source (sans secrets)
+
+### CORS
+
+**Production :**
+```python
+ALLOWED_ORIGINS = [
+    "https://skapa-frontend.railway.app",
+    "https://skapa.com"
+]
+```
+
+**Développement :**
+```python
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000"   # Alternative
+]
+```
+
+---
+
+## 📊 Flux de données
+
+### 1. Requête météo (Frontend)
+
+```
+User (Frontend)
+    ↓ GET /weather/fetch?lat=48.85&lon=2.35
+Backend API (JWT auth)
+    ↓ Vérifier cache (10min TTL)
+    ├─ Cache HIT → Return cached data
+    └─ Cache MISS → Fetch Open-Meteo
+                    ↓ Store in SQLite
+                    ↓ Store in cache
+                    ↓ Return data
+```
+
+### 2. Conversation agent (Telegram Bot)
+
+```
+User (Telegram)
+    ↓ "Météo à Paris"
+Bot Telegram
+    ↓ POST /agent/ask (API Key auth)
+Backend Agent
+    ↓ Parse intention (LLM)
+    ├─ Géocodage "Paris" → (48.85, 2.35)
+    ├─ Fetch météo → Open-Meteo
+    ├─ RAG search → Knowledge base
+    └─ Generate answer → LLM (OpenAI/Claude)
+        ↓ Store conversation
+        ↓ Return answer
+Bot Telegram
+    ↓ Send message to user
+```
+
+### 3. MCP Tool call (Claude Desktop)
+
+```
+Claude Desktop
+    ↓ tools/call (get_weather)
+MCP Server (stdio)
+    ↓ Validate params (Pydantic)
+    ↓ Fetch Open-Meteo
+    ↓ Format response (WeatherResponse)
+    ↓ Return JSON-RPC 2.0
+Claude Desktop
+    ↓ Display to user
+```
+
+---
+
+## 🚀 Déploiement
+
+### Local (développement)
+
 ```bash
+# Backend
+cd backend
+source ../.venv/bin/activate
+uvicorn main:app --reload --port 8000
+
+# Frontend
 cd frontend
-npm install
-npm run dev
+npm run dev  # Port 5173
+
+# Bot Telegram
+python -m app.bot.telegram_bot
+
+# MCP Server (stdio)
+python -m app.mcp.server
 ```
 
-**Avec Docker Compose :**
+### Railway (production)
+
+**Services :**
+1. **Backend API** : `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+2. **Frontend** : Static site (Vite build)
+3. **MCP Server** : `python backend/services/mcp/run_http.py`
+
+**Variables Railway :**
+- Définies dans Railway Dashboard
+- Pas de `.env` commité
+- Secrets rotatés régulièrement
+
+---
+
+## 📈 Performance
+
+### Bottlenecks identifiés
+
+1. **Agent LLM** : 1-5s (70-90% du temps total)
+2. **Weather API** : 0.5-1.5s
+3. **Géocodage** : 0.2-0.5s
+
+### Optimisations implémentées
+
+1. **Cache intelligent** :
+   - Géocodage : 24h TTL
+   - Météo : 10min TTL
+   - Hit rate attendu : 60-80%
+
+2. **Timing instrumentation** :
+   - Logs granulaires (⏱️ [OPERATION] took X.XXs)
+   - Identification bottlenecks réels
+
+3. **Async/await** :
+   - `asyncio.to_thread()` pour appels bloquants
+   - Non-blocking I/O
+
+### Métriques cibles
+
+| Métrique | Avant | Après | Amélioration |
+|----------|-------|-------|--------------|
+| Temps réponse bot | 4-6s | 2-3s | -40 à -50% |
+| Cache hit rate | 0% | 60-80% | N/A |
+| Temps perçu (UX) | 4-6s | <2s | -60 à -70% |
+
+---
+
+## 🧪 Tests
+
+### Scripts disponibles
+
 ```bash
-cd infra/docker
-docker-compose up --build
+# Performance bot
+python scripts/test_bot_performance.py
+
+# Conformité MCP
+python scripts/test_mcp_compliance.py
+
+# Ingestion knowledge base
+python scripts/ingest_knowledge.py
 ```
 
-Accès :
-- Backend : http://localhost:8000
-- Frontend : http://localhost:5173
-- Docs API : http://localhost:8000/docs
-
----
-
-## 📝 Variables d'environnement
-
-Copier `.env.example` vers `.env` et remplir :
+### Tests manuels
 
 ```bash
-# JWT Settings
-JWT_SECRET=your_jwt_secret_here_256_bits
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
-JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+# Backend API
+curl http://localhost:8000/
 
-# Cookie Settings
-COOKIE_NAME=skapa_access_token
-COOKIE_SECURE=false  # true en production (HTTPS)
-COOKIE_SAMESITE=lax
-COOKIE_DOMAIN=
+# Cache stats
+curl http://localhost:8000/cache/stats
 
-# API Key (services externes)
-API_KEY=your_api_key_here_256_bits
-
-# Database
-DATABASE_URL=sqlite:///./data/skapa.db
-
-# CORS
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-
-# Rate Limiting
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_PER_MINUTE=100
+# Weather API
+curl "http://localhost:8000/weather/fetch?latitude=48.85&longitude=2.35"
 ```
 
 ---
 
-## 📚 Documentation
+## 🎓 Choix techniques justifiés
 
-- **[JWT_IMPLEMENTATION.md](docs/JWT_IMPLEMENTATION.md)** : Documentation complète de l'authentification JWT
-  - Architecture détaillée
-  - Justifications techniques bloc par bloc
-  - Analyse sécurité/performance
-  - Tests & validation
+### Pourquoi FastAPI ?
+- **Async natif** : Performance I/O-bound
+- **Pydantic** : Validation automatique
+- **OpenAPI** : Documentation auto-générée
+- **Type hints** : Meilleure maintenabilité
 
-- **[infra/README.md](infra/README.md)** : Guide infrastructure & déploiement
+### Pourquoi SQLite ?
+- **Simplicité** : Pas de serveur externe
+- **Performance** : Suffisant pour le cas d'usage
+- **Portabilité** : Un seul fichier
+- **Trade-off** : Pas de scaling horizontal (acceptable pour MVP)
 
----
+### Pourquoi FastMCP ?
+- **SDK officiel** : Conforme par design
+- **Simplicité** : Moins verbeux que SDK bas niveau
+- **Type safety** : Pydantic + type hints
+- **Trade-off** : Moins de contrôle (acceptable)
 
-## 🔄 Migration depuis l'ancienne structure
-
-### Changements principaux
-
-1. **`app/` → `backend/`** : Nouvelle structure modulaire
-2. **`app/core/` → `backend/web/auth/`** : Module auth dédié
-3. **`app/api/v1/endpoints/` → `backend/web/*/`** : Endpoints par module
-4. **`app/bot/` → `backend/services/bot/`** : Services externes séparés
-5. **`app/config.py` → `backend/shared/config/`** : Config partagée
-6. **`Dockerfile` → `infra/docker/`** : Infrastructure séparée
-
-### Imports à mettre à jour
-
-**Avant :**
-```python
-from app.config import JWT_SECRET
-from app.core.security import hash_password
-from app.db.crud import get_user_by_id
-```
-
-**Après :**
-```python
-from backend.shared.config import JWT_SECRET
-from backend.web.auth.security import hash_password
-from backend.shared.db import get_user_by_id
-```
+### Pourquoi React + Vite ?
+- **Performance** : Vite HMR ultra-rapide
+- **Écosystème** : Composants réutilisables
+- **Type safety** : TypeScript
+- **Trade-off** : Complexité (acceptable pour UI riche)
 
 ---
 
-## ✅ Avantages de la nouvelle structure
+## 🔮 Évolutions futures
 
-1. ✅ **Clarté** : Séparation claire front/back/services/infra
-2. ✅ **Maintenabilité** : Modifications localisées par module
-3. ✅ **Testabilité** : Tests unitaires par module
-4. ✅ **Évolutivité** : Facile d'ajouter de nouveaux modules
-5. ✅ **Documentation** : Structure auto-documentée
+### Court terme (1-2 semaines)
+- [ ] Tests unitaires (pytest)
+- [ ] CI/CD (GitHub Actions)
+- [ ] Monitoring (Sentry, Datadog)
+- [ ] Rate limiting (slowapi)
+
+### Moyen terme (1-2 mois)
+- [ ] PostgreSQL (remplacer SQLite)
+- [ ] Redis cache (remplacer cache mémoire)
+- [ ] Streaming LLM (meilleure UX)
+- [ ] Webhooks Telegram (remplacer polling)
+
+### Long terme (3-6 mois)
+- [ ] Multi-tenancy (plusieurs utilisateurs)
+- [ ] API versioning (v2)
+- [ ] Microservices (si scaling nécessaire)
+- [ ] Kubernetes (si scaling horizontal)
 
 ---
 
-## 🔗 Liens utiles
+## 📚 Références
 
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [React Documentation](https://react.dev/)
-- [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
-- [OWASP Security](https://owasp.org/)
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [MCP Specification](https://modelcontextprotocol.io/specification/latest)
+- [python-telegram-bot](https://python-telegram-bot.org/)
+- [Open-Meteo API](https://open-meteo.com/en/docs)
+- [Railway Docs](https://docs.railway.app/)
 
 ---
 
-**Auteur** : Benjamin Chabanis  
-**Contact** : chabanisb@icloud.com  
-**Repository** : https://github.com/vog01r/IA_engineer_entretien_SKAPA
+**Dernière mise à jour :** 2026-02-17  
+**Auteur :** Benjamin Chabanis  
+**Contact :** [GitHub](https://github.com/chabanis)

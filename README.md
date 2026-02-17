@@ -88,6 +88,32 @@ Utilisateur Telegram
 
 **Note :** Seule **une variante** de la question 3.3 est à traiter (A, B ou C au choix).
 
+## 🏗️ Architecture
+
+**Structure du projet (après restructuration) :**
+
+```
+backend/          # Backend FastAPI (API + Services)
+├── web/          # API Web (JWT auth) - Frontend, utilisateurs
+├── services/     # Services externes (API Key auth) - Bot, MCP
+└── shared/       # Code partagé (config, DB, cache)
+
+frontend/         # Frontend React + Vite + Tailwind
+docs/             # Documentation technique
+scripts/          # Scripts utilitaires (tests, ingestion)
+infra/            # Infrastructure & déploiement
+```
+
+**Documentation complète :** Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+**Améliorations implémentées :**
+- ✅ Cache intelligent (géocodage 24h, météo 10min)
+- ✅ Timing instrumentation (identification bottlenecks)
+- ✅ MCP conforme protocole standard (annotations, schemas)
+- ✅ Séparation claire des responsabilités
+
+---
+
 ## Rendus attendus
 
 Tout via **Pull Request vers `main`**. Voir `INSTRUCTIONS_QCM.md` pour les détails complets.
