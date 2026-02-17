@@ -7,8 +7,23 @@
 ## ⚠️ Prérequis
 
 1. **Venv activé** : `source .venv/bin/activate`
-2. **Variables d'environnement** : Fichier `.env` configuré
-3. **Python 3** : Utiliser `python3` (pas `python` sur macOS)
+2. **Dépendances installées** : `pip install -r requirements.txt`
+3. **Variables d'environnement** : Fichier `.env` configuré
+4. **Python 3** : Utiliser `python3` (pas `python` sur macOS)
+
+### Installation initiale (une seule fois)
+
+```bash
+cd "/Users/chabanis/Documents/code dev/SKAPA/IA_engineer_entretien_SKAPA"
+source .venv/bin/activate
+
+# Installer toutes les dépendances
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+
+# Si erreur SSL, installer manuellement :
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+  'passlib[bcrypt]' python-multipart slowapi email-validator
+```
 
 ---
 
