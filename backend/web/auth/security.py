@@ -25,6 +25,16 @@ from backend.shared.config import (
     JWT_SECRET,
 )
 
+
+def _ensure_jwt_secret() -> None:
+    """Lève si JWT_SECRET n'est pas configuré (évite crash au premier usage auth)."""
+    if not JWT_SECRET:
+        raise ValueError(
+            "JWT_SECRET must be set in environment variables for authentication. "
+            "Set it in .env (local) or in your deployment (Railway, etc.)."
+        )
+
+
 # Context bcrypt pour hashing passwords
 # rounds=12 (cost factor) = ~250ms par hash sur CPU moderne
 # Auto-salt : bcrypt génère un salt aléatoire pour chaque hash
@@ -108,6 +118,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         - Expiration courte (1h par défaut)
         - Pas de données sensibles dans le payload (visible en base64)
     """
+    _ensure_jwt_secret()
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -138,6 +149,7 @@ def create_refresh_token(data: dict) -> str:
         - Expiration longue (7j) pour UX fluide
         - Peut être révoqué via blacklist en base (optionnel)
     """
+    _ensure_jwt_secret()
     expire = datetime.now(timezone.utc) + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode = data.copy()
     to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc), "type": "refresh"})
@@ -171,6 +183,7 @@ def decode_token(token: str) -> dict:
         - Vérifie l'expiration automatiquement
         - Lève exception si invalide (géré par middleware)
     """
+    _ensure_jwt_secret()
     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     return payload
 

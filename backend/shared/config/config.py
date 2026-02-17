@@ -26,10 +26,8 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",") if origin.strip()]
 
-# JWT Configuration
+# JWT Configuration (requis uniquement pour l'API web ; service MCP n'utilise pas JWT)
 JWT_SECRET = os.getenv("JWT_SECRET", "")
-if not JWT_SECRET:
-    raise ValueError("JWT_SECRET must be set in environment variables")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7"))
