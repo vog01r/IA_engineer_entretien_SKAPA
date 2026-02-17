@@ -367,35 +367,13 @@ python3 -m backend.services.mcp.server
 
 ## 🧪 Tests
 
-**Scripts :** `scripts/test_bot_performance.py`, `scripts/test_mcp_compliance.py`, `scripts/test_mcp_e2e.py`, `scripts/ingest_knowledge.py`. **Commandes détaillées :** voir [QUICKSTART.md](../QUICKSTART.md) et [MCP_SETUP.md](MCP_SETUP.md).
+**Scripts :** `scripts/test_bot_performance.py`, `scripts/test_mcp_compliance.py`, `scripts/test_mcp_e2e.py`, `scripts/ingest_knowledge.py`. **Commandes détaillées :** voir [QUICKSTART.md](QUICKSTART.md) et [MCP_SETUP.md](MCP_SETUP.md).
 
 ---
 
-## 🎓 Choix techniques justifiés
+## 🎓 Décisions techniques
 
-### Pourquoi FastAPI ?
-- **Async natif** : Performance I/O-bound
-- **Pydantic** : Validation automatique
-- **OpenAPI** : Documentation auto-générée
-- **Type hints** : Meilleure maintenabilité
-
-### Pourquoi SQLite ?
-- **Simplicité** : Pas de serveur externe
-- **Performance** : Suffisant pour le cas d'usage
-- **Portabilité** : Un seul fichier
-- **Trade-off** : Pas de scaling horizontal (acceptable pour MVP)
-
-### Pourquoi FastMCP ?
-- **SDK officiel** : Conforme par design
-- **Simplicité** : Moins verbeux que SDK bas niveau
-- **Type safety** : Pydantic + type hints
-- **Trade-off** : Moins de contrôle (acceptable)
-
-### Pourquoi React + Vite ?
-- **Performance** : Vite HMR ultra-rapide
-- **Écosystème** : Composants réutilisables
-- **Type safety** : TypeScript
-- **Trade-off** : Complexité (acceptable pour UI riche)
+Toutes les justifications (auth, cache, MCP, rate limiting, structure, performance) sont centralisées dans **[`DECISIONS.md`](../DECISIONS.md)** à la racine du projet.
 
 ---
 

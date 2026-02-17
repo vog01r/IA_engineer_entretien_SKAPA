@@ -43,6 +43,32 @@ Le frontend ne stocke plus aucune clé. Il envoie ses cookies automatiquement vi
 - **Refresh token 7j** : UX fluide sans re-login constant.
 - **SameSite=lax** : bloque les requêtes CSRF cross-site initiées par des formulaires tiers, tout en autorisant les navigations normales (liens, redirections OAuth).
 
+**Configuration cookies (dev vs prod) :**
+
+| Attribut | Dev | Prod | Rôle |
+|---|---|---|---|
+| `HttpOnly` | `true` | `true` | Bloque accès JS (XSS) |
+| `Secure` | `false` | `true` | HTTPS uniquement |
+| `SameSite` | `lax` | `lax` | Protection CSRF basique |
+| `Max-Age` | access: 3600 | access: 3600 | Expiration auto |
+
+**Flux complet :**
+```
+POST /auth/login {email, password}
+  → verify bcrypt hash
+  → create access_token (1h) + refresh_token (7j)
+  → Set-Cookie: skapa_access_token=...; HttpOnly; SameSite=lax; Secure
+
+GET /weather/ (requête authentifiée)
+  → Cookie: skapa_access_token=<jwt>
+  → decode + verify signature + expiration
+  → inject user dans le handler
+
+POST /auth/refresh
+  → Cookie: skapa_access_token_refresh=<jwt>
+  → verify refresh token → issue new access_token
+```
+
 ---
 
 ## 3. Authentification duale — JWT (web) + API Key (services)

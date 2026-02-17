@@ -106,7 +106,7 @@ infra/            # Infrastructure & déploiement
 
 **Décisions techniques :** Voir [`DECISIONS.md`](DECISIONS.md) — justifications de chaque choix (auth, cache, MCP, structure, rate limiting).
 
-**Documentation :** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/AUTH.md`](docs/AUTH.md) · [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md)
+**Documentation :** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) · [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 
 **Corrections et implémentations :**
 - ✅ Sécurité : JWT httpOnly cookies, suppression clé frontend, timing attack fix
