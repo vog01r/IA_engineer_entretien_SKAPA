@@ -2,7 +2,7 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.db.crud import (
+from backend.shared.db.crud import (
     get_all_weather,
     get_weather_by_date_range,
     get_weather_by_location,

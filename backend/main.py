@@ -20,6 +20,8 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.web.auth.endpoints import router as auth_router
+from backend.web.weather.endpoints import router as weather_router
+from backend.web.agent.endpoints import router as agent_router
 from backend.shared.config import ALLOWED_ORIGINS
 from backend.shared.cache import get_cache_stats, clear_cache
 
@@ -47,7 +49,19 @@ app.include_router(
     tags=["Authentication"],
 )
 
-# TODO: Ajouter weather_router et agent_router après migration
+# Routes Weather (API Key auth pour services, JWT pour web)
+app.include_router(
+    weather_router,
+    prefix="/weather",
+    tags=["Weather"],
+)
+
+# Routes Agent (API Key auth pour services, JWT pour web)
+app.include_router(
+    agent_router,
+    prefix="/agent",
+    tags=["Agent"],
+)
 
 @app.get("/", tags=["Root"])
 async def read_root():
